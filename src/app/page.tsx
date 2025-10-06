@@ -503,9 +503,6 @@ export default function Home() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setIsSuccessAlertOpen(false)}>Fechar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleGenerateReceipt} className="flex items-center gap-2">
-              <FileText /> Gerar Nota
-            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
