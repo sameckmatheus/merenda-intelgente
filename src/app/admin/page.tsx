@@ -293,14 +293,15 @@ export default function AdminDashboard() {
                     <Button variant={filterType === 'week' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterType('week')}>Semana</Button>
                     <Button variant={filterType === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterType('month')}>Mês</Button>
                 </div>
+                <Popover>
                     <PopoverTrigger asChild>
                         <Button variant={"outline"} className={cn("w-full sm:w-[280px] justify-start text-left font-normal", !date && "text-muted-foreground")}>
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             <span>{getPeriodLabel()}</span>
-                            </Button>
-                      </PopoverTrigger>
--                     <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={setDate} initialFocus /></PopoverContent>
-+                     <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={setDate} initialFocus locale={ptBR} /></PopoverContent>
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={setDate} initialFocus /></PopoverContent>
+                </Popover>
               </div>
                <Select value={selectedSchool} onValueChange={setSelectedSchool}>
                   <SelectTrigger className="w-full md:w-[280px]">
