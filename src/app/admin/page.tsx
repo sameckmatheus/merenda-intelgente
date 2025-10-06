@@ -245,11 +245,11 @@ export default function AdminDashboard() {
         <main className="container mx-auto p-4 md:p-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
               <div>
-                  <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2"><BarChart className="text-primary"/> Dashboard de Acompanhamento</h2>
+                  <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">Dashboard de Acompanhamento</h2>
                   <p className="text-muted-foreground">Visualize os registros de merenda e gere relatórios.</p>
               </div>
               <div className="flex items-center gap-2">
-                 <Button variant="outline"><FileDown /> Relatório Geral</Button>
+                 <Button variant="outline"><FileDown />Relatório Geral</Button>
               </div>
           </div>
 

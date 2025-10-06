@@ -267,7 +267,7 @@ export default function Home() {
                   />
                   <FormField control={form.control} name="respondentName" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-2"><User /> Nome do Responsável</FormLabel>
+                        <FormLabel className="flex items-center gap-2"><User />Responsável pela informação</FormLabel>
                         <FormControl><Input placeholder="Insira seu nome" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
