@@ -69,6 +69,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ptBR } from 'date-fns/locale';
 
 const schools = [
     "ANEXO MARCOS FREIRE",
@@ -287,26 +288,50 @@ export default function Home() {
                       </FormItem>
                     )}
                   />
-                  <FormField control={form.control} name="date" render={({ field }) => (
+                  <FormField
+                    control={form.control}
+                    name="date"
+                    render={({ field }) => (
                       <FormItem className="flex flex-col">
-                        <FormLabel className="flex items-center gap-2"><CalendarIcon /> Data do Registro</FormLabel>
-                        {isClient && <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                {field.value ? (format(field.value, "PPP")) : (<span>Selecione a data</span>)}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                          </PopoverContent>
-                        </Popover>}
+                        <FormLabel className="flex items-center gap-2">
+                          <CalendarIcon /> Data do Registro
+                        </FormLabel>
+                        {isClient && (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                    "pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP", { locale: ptBR })
+                                  ) : (
+                                    <span>Selecione a data</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                initialFocus
+                                locale={ptBR}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
                 </div>
 
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
