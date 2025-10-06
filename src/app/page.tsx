@@ -69,6 +69,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ptBR } from 'date-fns/locale';
 
 const schools = [
     "ANEXO MARCOS FREIRE",
@@ -300,7 +301,8 @@ export default function Home() {
                             </FormControl>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
++                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={ptBR} />
                           </PopoverContent>
                         </Popover>}
                         <FormMessage />
