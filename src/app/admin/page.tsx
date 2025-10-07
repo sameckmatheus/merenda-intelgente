@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, where, Timestamp, doc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, query, where, Timestamp, doc, deleteDoc, updateDoc } from "firebase/firestore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -74,6 +74,7 @@ export interface Submission {
     itemsPurchased?: string;
     observations?: string;
     shift: string;
+    status?: 'pendente' | 'atendido' | 'atendido_parcialmente' | 'recusado';
     createdAt: Timestamp;
 }
 
@@ -107,6 +108,7 @@ export default function AdminDashboard() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [filterType, setFilterType] = useState<'day' | 'week' | 'month'>('day');
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSubmissions = async () => {
@@ -219,6 +221,27 @@ export default function AdminDashboard() {
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   }
+
+  const statusTranslations: { [key in NonNullable<Submission['status']>]: string } = {
+    pendente: 'Pendente',
+    atendido: 'Atendido',
+    atendido_parcialmente: 'Atendido parcialmente',
+    recusado: 'Recusado',
+  };
+
+  const handleChangeStatus = async (submissionId: string, newStatus: NonNullable<Submission['status']>) => {
+    try {
+      setUpdatingStatusId(submissionId);
+      await updateDoc(doc(db, 'submissions', submissionId), { status: newStatus });
+      setSubmissions(prev => prev.map(s => s.id === submissionId ? { ...s, status: newStatus } : s));
+      toast({ title: 'Status atualizado', description: 'O status foi salvo com sucesso.' });
+    } catch (error) {
+      console.error('Erro ao atualizar status', error);
+      toast({ variant: 'destructive', title: 'Erro ao atualizar status', description: 'Tente novamente.' });
+    } finally {
+      setUpdatingStatusId(null);
+    }
+  };
 
   const DetailItem = ({ icon, label, value, fullWidth = false }: { icon: React.ReactNode, label: string, value?: string | number | boolean | null, fullWidth?: boolean }) => {
     if (value === null || value === undefined || value === '' || value === false) return null;
@@ -335,6 +358,7 @@ export default function AdminDashboard() {
                           <TableHead>Responsável</TableHead>
                           <TableHead>Cardápio</TableHead>
                           <TableHead>Alunos</TableHead>
+                          <TableHead>Status</TableHead>
                           <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -347,6 +371,25 @@ export default function AdminDashboard() {
                             <TableCell>{sub.respondentName}</TableCell>
                             <TableCell><div className={`px-2 py-1 text-xs rounded-full text-center border ${getMenuTypeStyle(sub.menuType)}`}>{menuTypeTranslations[sub.menuType]}</div></TableCell>
                             <TableCell>{sub.presentStudents}/{sub.totalStudents}</TableCell>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <Select
+                                value={(sub.status ?? 'pendente')}
+                                onValueChange={(value) => handleChangeStatus(sub.id, value as NonNullable<Submission['status']>)}
+                                disabled={updatingStatusId === sub.id}
+                              >
+                                <SelectTrigger className="w-[220px]">
+                                  <SelectValue placeholder="Selecione o status">
+                                    {statusTranslations[(sub.status ?? 'pendente') as NonNullable<Submission['status']>]}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pendente">Pendente</SelectItem>
+                                  <SelectItem value="atendido">Atendido</SelectItem>
+                                  <SelectItem value="atendido_parcialmente">Atendido parcialmente</SelectItem>
+                                  <SelectItem value="recusado">Recusado</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
                             <TableCell className="text-right">
                                 <AlertDialog onOpenChange={(open) => !open && setIsDeleting(false)}>
                                   <AlertDialogTrigger asChild onClick={(e) => e.stopPropagation()}>
