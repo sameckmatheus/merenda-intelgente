@@ -62,7 +62,7 @@ export interface Submission {
     school: string;
     menuType: 'planned' | 'alternative' | 'improvised';
     respondentName: string;
-    date: Timestamp;
+    date: Timestamp | number;
     totalStudents: number;
     presentStudents: number;
     alternativeMenuDescription?: string;
@@ -75,7 +75,7 @@ export interface Submission {
     observations?: string;
     shift: string;
     status?: 'pendente' | 'atendido' | 'atendido_parcialmente' | 'recusado';
-    createdAt: Timestamp;
+    createdAt: Timestamp | number;
 }
 
 const schools = [
@@ -114,12 +114,9 @@ export default function AdminDashboard() {
     const fetchSubmissions = async () => {
         setIsLoading(true);
         try {
-            let submissionsQuery = query(collection(db, "submissions"));
-
+            let startDate: Date | null = null;
+            let endDate: Date | null = null;
             if (date) {
-                let startDate: Date;
-                let endDate: Date;
-
                 if (filterType === 'day') {
                     startDate = new Date(date);
                     startDate.setHours(0, 0, 0, 0);
@@ -132,25 +129,19 @@ export default function AdminDashboard() {
                     startDate = startOfMonth(date);
                     endDate = endOfMonth(date);
                 }
-
-                submissionsQuery = query(
-                    submissionsQuery,
-                    where("date", ">=", Timestamp.fromDate(startDate)),
-                    where("date", "<=", Timestamp.fromDate(endDate))
-                );
             }
-            
-            const querySnapshot = await getDocs(submissionsQuery);
-            const submissionsData = querySnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            } as Submission)).sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
-            
-            const filteredData = selectedSchool === "all"
-                ? submissionsData
-                : submissionsData.filter(s => s.school === selectedSchool);
 
-            setSubmissions(filteredData);
+            const params = new URLSearchParams();
+            if (startDate && endDate) {
+                params.set('start', String(startDate.getTime()));
+                params.set('end', String(endDate.getTime()));
+            }
+            if (selectedSchool) params.set('school', selectedSchool);
+
+            const res = await fetch(`/api/submissions?${params.toString()}`, { cache: 'no-store' });
+            if (!res.ok) throw new Error('Falha ao buscar');
+            const json = await res.json();
+            setSubmissions(json.submissions as Submission[]);
         } catch (error) {
             console.error("Error fetching submissions: ", error);
              toast({
@@ -232,7 +223,12 @@ export default function AdminDashboard() {
   const handleChangeStatus = async (submissionId: string, newStatus: NonNullable<Submission['status']>) => {
     try {
       setUpdatingStatusId(submissionId);
-      await updateDoc(doc(db, 'submissions', submissionId), { status: newStatus });
+      const res = await fetch(`/api/submissions/${submissionId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error('Falha ao salvar');
       setSubmissions(prev => prev.map(s => s.id === submissionId ? { ...s, status: newStatus } : s));
       toast({ title: 'Status atualizado', description: 'O status foi salvo com sucesso.' });
     } catch (error) {
@@ -366,7 +362,7 @@ export default function AdminDashboard() {
                         {submissions.map((sub) => (
                           <TableRow key={sub.id} onClick={() => setSelectedSubmission(sub)} className="cursor-pointer">
                             <TableCell className="font-medium">{sub.school}</TableCell>
-                            <TableCell>{format(sub.date.toDate(), "dd/MM/yy")}</TableCell>
+                            <TableCell>{format((sub.date instanceof Timestamp ? sub.date.toDate() : new Date(sub.date)), "dd/MM/yy")}</TableCell>
                             <TableCell>{sub.shift}</TableCell>
                             <TableCell>{sub.respondentName}</TableCell>
                             <TableCell><div className={`px-2 py-1 text-xs rounded-full text-center border ${getMenuTypeStyle(sub.menuType)}`}>{menuTypeTranslations[sub.menuType]}</div></TableCell>
@@ -429,7 +425,7 @@ export default function AdminDashboard() {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2 text-xl"><Building /> {selectedSubmission.school}</DialogTitle>
                 <DialogDescription>
-                  Registro de {selectedSubmission.respondentName} para o turno da {selectedSubmission.shift} em {format(selectedSubmission.date.toDate(), "PPP", { locale: ptBR })}.
+                  Registro de {selectedSubmission.respondentName} para o turno da {selectedSubmission.shift} em {format((selectedSubmission.date instanceof Timestamp ? selectedSubmission.date.toDate() : new Date(selectedSubmission.date)), "PPP", { locale: ptBR })}.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
