@@ -268,7 +268,38 @@ export default function AdminDashboard() {
                   <p className="text-muted-foreground">Visualize os registros de merenda e gere relatórios.</p>
               </div>
               <div className="flex items-center gap-2">
-                 <Button variant="outline"><FileDown />Relatório Geral</Button>
+                 <Button
+                   variant="outline"
+                   onClick={async () => {
+                     let startDate: Date | null = null;
+                     let endDate: Date | null = null;
+                     if (date) {
+                       if (filterType === 'day') {
+                         startDate = new Date(date);
+                         startDate.setHours(0, 0, 0, 0);
+                         endDate = new Date(date);
+                         endDate.setHours(23, 59, 59, 999);
+                       } else if (filterType === 'week') {
+                         startDate = startOfWeek(date, { locale: ptBR });
+                         endDate = endOfWeek(date, { locale: ptBR });
+                       } else {
+                         startDate = startOfMonth(date);
+                         endDate = endOfMonth(date);
+                       }
+                     }
+                     const params = new URLSearchParams();
+                     if (startDate && endDate) {
+                       params.set('start', String(startDate.getTime()));
+                       params.set('end', String(endDate.getTime()));
+                     }
+                     if (selectedSchool) params.set('school', selectedSchool);
+                     const url = `/api/reports/general?${params.toString()}`;
+                     // abrir em nova aba para download
+                     window.open(url, '_blank');
+                   }}
+                 >
+                   <FileDown />Relatório Geral
+                 </Button>
               </div>
           </div>
 
