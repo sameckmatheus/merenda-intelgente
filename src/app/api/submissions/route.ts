@@ -31,6 +31,7 @@ export async function GET(request: Request) {
     const start = searchParams.get('start');
     const end = searchParams.get('end');
     const school = searchParams.get('school');
+    const status = searchParams.get('status');
 
     const db = getFirestore();
     const collectionRef = db.collection('submissions') as FirebaseFirestore.CollectionReference<FirebaseFirestore.DocumentData>;
@@ -47,17 +48,26 @@ export async function GET(request: Request) {
     // index, run the date-range query and filter by school locally. If only school is
     // provided, query by school directly.
     let docs: FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>[] = [];
-    if (school && school !== 'all') {
-      if (start && end) {
-        const snapshot = await q.get();
-        docs = snapshot.docs.filter((d) => (d.data()?.school || '') === school);
-      } else {
-        const snapshot = await collectionRef.where('school', '==', school).get();
-        docs = snapshot.docs;
-      }
-    } else {
+    
+    // Se temos filtro por escola e data, precisamos filtrar escola localmente
+    if (school && school !== 'all' && start && end) {
+      const snapshot = await q.get();
+      docs = snapshot.docs.filter((d) => (d.data()?.school || '') === school);
+    } 
+    // Se temos apenas escola, podemos filtrar direto no Firestore
+    else if (school && school !== 'all') {
+      const snapshot = await collectionRef.where('school', '==', school).get();
+      docs = snapshot.docs;
+    }
+    // Sem filtros específicos, usar a query base
+    else {
       const snapshot = await q.get();
       docs = snapshot.docs;
+    }
+
+    // Aplicar filtro por status localmente se fornecido
+    if (status && status !== 'all') {
+      docs = docs.filter((d) => (d.data()?.status || 'pendente') === status);
     }
 
     const submissions = docs

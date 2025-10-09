@@ -103,6 +103,7 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [selectedSchool, setSelectedSchool] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -137,6 +138,7 @@ export default function AdminDashboard() {
                 params.set('end', String(endDate.getTime()));
             }
             if (selectedSchool) params.set('school', selectedSchool);
+            if (selectedStatus && selectedStatus !== 'all') params.set('status', selectedStatus);
 
             const res = await fetch(`/api/submissions?${params.toString()}`, { cache: 'no-store' });
             if (!res.ok) throw new Error('Falha ao buscar');
@@ -155,7 +157,7 @@ export default function AdminDashboard() {
     };
 
     fetchSubmissions();
-  }, [date, selectedSchool, toast, filterType]);
+  }, [date, selectedSchool, selectedStatus, toast, filterType]);
 
   const handleLogout = async () => {
     await fetch('/api/logout', { method: 'POST' });
@@ -353,15 +355,32 @@ export default function AdminDashboard() {
                     <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={setDate} initialFocus /></PopoverContent>
                 </Popover>
               </div>
-               <Select value={selectedSchool} onValueChange={setSelectedSchool}>
-                  <SelectTrigger className="w-full md:w-[280px]">
-                    <div className="flex items-center gap-2"><Building className="h-4 w-4" /><SelectValue placeholder="Filtrar por escola" /></div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as Escolas</SelectItem>
-                    {schools.map((school) => (<SelectItem key={school} value={school}>{school}</SelectItem>))}
-                  </SelectContent>
-                </Select>
+               <div className="flex flex-col sm:flex-row gap-2">
+                 <Select value={selectedSchool} onValueChange={setSelectedSchool}>
+                    <SelectTrigger className="w-full md:w-[280px]">
+                      <div className="flex items-center gap-2"><Building className="h-4 w-4" /><SelectValue placeholder="Filtrar por escola" /></div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as Escolas</SelectItem>
+                      {schools.map((school) => (<SelectItem key={school} value={school}>{school}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                    <SelectTrigger className="w-full md:w-[200px]">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        <SelectValue placeholder="Filtrar por status" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os Status</SelectItem>
+                      {Object.entries(statusTranslations).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
           </div>
 
           {isLoading ? (
