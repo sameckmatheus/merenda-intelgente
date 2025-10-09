@@ -410,7 +410,14 @@ export default function AdminDashboard() {
                       </TableHeader>
                       <TableBody>
                         {submissions.map((sub) => (
-                          <TableRow key={sub.id} onClick={() => setSelectedSubmission(sub)} className="cursor-pointer">
+                          <TableRow 
+                            key={sub.id} 
+                            onClick={() => setSelectedSubmission(sub)} 
+                            className={cn(
+                              "cursor-pointer",
+                              sub.helpNeeded && "bg-red-50 hover:bg-red-100"
+                            )}
+                          >
                             <TableCell className="font-medium">{sub.school}</TableCell>
                             <TableCell>{format((sub.date instanceof Timestamp ? sub.date.toDate() : new Date(sub.date)), "dd/MM/yy")}</TableCell>
                             <TableCell>{sub.shift}</TableCell>
