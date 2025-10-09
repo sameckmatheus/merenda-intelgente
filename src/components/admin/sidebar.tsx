@@ -48,15 +48,32 @@ const menuItems = [
   },
 ];
 
-export function AdminSidebar() {
+import { Filters } from "@/components/admin/filters";
+
+interface AdminSidebarProps {
+  date: Date | undefined;
+  setDate: (date: Date | undefined) => void;
+  filterType: 'day' | 'week' | 'month';
+  setFilterType: (type: 'day' | 'week' | 'month') => void;
+  selectedSchool: string;
+  setSelectedSchool: (school: string) => void;
+  selectedStatus: string;
+  setSelectedStatus: (status: string) => void;
+  helpNeededFilter: 'all' | 'yes' | 'no';
+  setHelpNeededFilter: (filter: 'all' | 'yes' | 'no') => void;
+  schools: string[];
+  statusTranslations: { [key: string]: string };
+}
+
+export function AdminSidebar(props: AdminSidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden md:flex h-screen w-64 flex-col fixed left-0 top-0 border-r bg-card px-4">
+    <aside className="hidden md:flex h-screen w-72 flex-col fixed left-0 top-0 border-r bg-card px-4 overflow-y-auto">
       <div className="h-16 flex items-center border-b w-full">
         <h2 className="font-semibold tracking-tight">MenuPlanner</h2>
       </div>
-      <nav className="flex-1 space-y-2 py-4">
+  <nav className="space-y-2 py-4">
         {menuItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -74,6 +91,22 @@ export function AdminSidebar() {
           );
         })}
       </nav>
+      <div className="mt-4">
+        <Filters
+          date={props.date}
+          setDate={props.setDate}
+          filterType={props.filterType}
+          setFilterType={props.setFilterType}
+          selectedSchool={props.selectedSchool}
+          setSelectedSchool={props.setSelectedSchool}
+          selectedStatus={props.selectedStatus}
+          setSelectedStatus={props.setSelectedStatus}
+          helpNeededFilter={props.helpNeededFilter}
+          setHelpNeededFilter={props.setHelpNeededFilter}
+          schools={props.schools}
+          statusTranslations={props.statusTranslations}
+        />
+      </div>
       <div className="border-t py-4">
         <div className="text-xs text-muted-foreground">
           © 2025 MenuPlanner

@@ -217,8 +217,21 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen w-full bg-slate-50">
-      <AdminSidebar />
-      <div className="md:pl-64">
+      <AdminSidebar
+        date={date}
+        setDate={setDate}
+        filterType={filterType}
+        setFilterType={setFilterType}
+        selectedSchool={selectedSchool}
+        setSelectedSchool={setSelectedSchool}
+        selectedStatus={selectedStatus}
+        setSelectedStatus={setSelectedStatus}
+        helpNeededFilter={helpNeededFilter}
+        setHelpNeededFilter={setHelpNeededFilter}
+        schools={schools}
+        statusTranslations={statusTranslations}
+      />
+      <div className="md:pl-72">
         <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-sm">
           <div className="flex h-16 items-center justify-between px-4">
             <div>
