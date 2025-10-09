@@ -34,6 +34,12 @@ const STATUS_COLORS = {
   cancelado: '#ef4444',
 } as const;
 
+const STATUS_TW = {
+  pendente: 'bg-amber-400',
+  confirmado: 'bg-emerald-500',
+  cancelado: 'bg-red-500',
+} as const;
+
 export default function AdminReports() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [filterType, setFilterType] = useState<'day' | 'week' | 'month'>('day');
@@ -347,9 +353,9 @@ export default function AdminReports() {
               <p className="text-muted-foreground">Gráficos de acompanhamento dos registros.</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" onClick={handleExportHighResPNG}>PNG (alta)</Button>
-              <Button variant="outline" size="sm" onClick={handleExportPDF}>PDF</Button>
-              <Button variant="default" size="sm" onClick={handleExportCSV}><Download className="mr-2 h-4 w-4" />CSV</Button>
+              <Button variant="secondary" size="sm" className="px-2 py-1 text-sm" onClick={handleExportHighResPNG} aria-label="Exportar PNG em alta resolução">PNG</Button>
+              <Button variant="outline" size="sm" className="px-2 py-1 text-sm" onClick={handleExportPDF} aria-label="Exportar PDF">PDF</Button>
+              <Button variant="default" size="sm" className="px-2 py-1 text-sm" onClick={handleExportCSV} aria-label="Exportar CSV"><Download className="mr-2 h-4 w-4" />CSV</Button>
             </div>
           </div>
         </header>
@@ -383,24 +389,48 @@ export default function AdminReports() {
           {/* Main grid: left large chart, right widgets */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div className="lg:col-span-2">
-              <Card className="h-[28rem]">
+              <Card className="h-52 md:h-72 lg:h-96">
                 <CardHeader>
                   <CardTitle>Registros no Período</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {isLoading ? (
-                    <div className="h-56 flex items-center justify-center">Carregando...</div>
+                    <div className="h-40 md:h-56 flex items-center justify-center">Carregando...</div>
                   ) : (
-                    <div className="h-56">
+                    <div className="h-40 md:h-56 lg:h-72">
                       <ChartContainer className="h-full" config={{ series: { color: '#3b82f6' } }}>
-                        <LineChart data={timeSeries} margin={{ top: 8, right: 10, left: 8, bottom: 8 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="date" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
-                        </LineChart>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={timeSeries} margin={{ top: 6, right: 8, left: 6, bottom: 6 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="date" interval={Math.max(0, Math.floor(timeSeries.length / 6))} tick={{ fontSize: 11 }} tickFormatter={(v) => {
+                              try {
+                                const d = new Date(v);
+                                return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                              } catch (e) {
+                                return String(v);
+                              }
+                            }} />
+                            <YAxis />
+                            <Tooltip labelFormatter={(label) => {
+                              // label is the short date; try to produce a full friendly date when possible
+                              try {
+                                const parts = String(label).split('/');
+                                if (parts.length === 2) {
+                                  const day = parseInt(parts[0], 10);
+                                  const month = parseInt(parts[1], 10) - 1;
+                                  const year = new Date().getFullYear();
+                                  return new Date(year, month, day).toLocaleString();
+                                }
+                                const d = new Date(String(label));
+                                return d.toLocaleString();
+                              } catch (e) {
+                                return String(label);
+                              }
+                            }} />
+                            <Legend />
+                            <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
                       </ChartContainer>
                     </div>
                   )}
@@ -409,37 +439,36 @@ export default function AdminReports() {
             </div>
 
             <div className="lg:col-span-1 flex flex-col gap-6">
-              <Card className="h-[20rem]">
+              <Card className="h-40 md:h-56 lg:h-72">
                 <CardHeader>
                   <CardTitle>Status das Submissões</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {isLoading ? (
-                    <div className="h-40 flex items-center justify-center">Carregando...</div>
+                    <div className="h-32 md:h-40 flex items-center justify-center">Carregando...</div>
                   ) : (
-                    <div className="h-40 flex items-center gap-6">
+                    <div className="h-28 md:h-40 lg:h-48 flex items-center gap-4">
                       <div className="flex-1 h-full flex items-center justify-center">
                         <ChartContainer className="h-full w-full" config={{ pendente: { color: STATUS_COLORS.pendente }, confirmado: { color: STATUS_COLORS.confirmado }, cancelado: { color: STATUS_COLORS.cancelado } }}>
-                          <PieChart>
-                            <Pie data={statusData} dataKey="value" nameKey="name" innerRadius={36} outerRadius={64} label />
-                            {statusData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as keyof typeof STATUS_COLORS]} />
-                            ))}
-                            <Tooltip />
-                          </PieChart>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={statusData} dataKey="value" nameKey="name" innerRadius={34} outerRadius={56} label={{ fontSize: 10 }} />
+                              {statusData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as keyof typeof STATUS_COLORS]} />
+                              ))}
+                              <Tooltip />
+                            </PieChart>
+                          </ResponsiveContainer>
                         </ChartContainer>
                       </div>
-                      <div className="w-36">
-                        <ul className="space-y-2">
-                          {statusData.map((s) => (
-                            <li key={s.name} className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2">
-                                <span className={`inline-block w-3 h-3 rounded-sm ${
-                                  s.name === 'pendente' ? 'bg-amber-400' : s.name === 'confirmado' ? 'bg-emerald-500' : 'bg-red-500'
-                                }`} />
-                                <span className="text-sm capitalize">{s.name}</span>
-                              </div>
-                              <div className="text-sm font-medium">{s.value}</div>
+                      <div className="w-40 md:w-44">
+                        <div className="text-xs text-muted-foreground mb-2">Legenda</div>
+                        <ul className="space-y-1 text-sm">
+                          {statusWithPercent.map(s => (
+                            <li key={s.name} className="flex items-center gap-2" aria-label={`Status ${s.name}: ${s.value} (${s.percent}%)`} title={`${s.name}: ${s.value} (${s.percent}%)`}>
+                              <span className={`w-3 h-3 rounded-sm shrink-0 ${STATUS_TW[s.name as keyof typeof STATUS_TW]}`} />
+                              <span className="font-medium">{s.name}</span>
+                              <span className="text-muted-foreground ml-auto">{s.value} <span className="text-xs text-muted-foreground">({s.percent}%)</span></span>
                             </li>
                           ))}
                         </ul>
@@ -449,7 +478,7 @@ export default function AdminReports() {
                 </CardContent>
               </Card>
 
-              <Card className="h-[16rem]">
+              <Card className="h-36 md:h-44 lg:h-56">
                 <CardHeader>
                   <CardTitle>Atividades Recentes</CardTitle>
                 </CardHeader>
