@@ -27,6 +27,12 @@ export type Submission = {
   description?: string
   itemsPurchased?: boolean
   status?: "pendente" | "atendido" | "atendido_parcialmente" | "recusado"
+  alternativeMenuDescription?: string
+  missingItems?: string
+  canBuyMissingItems?: boolean
+  suppliesReceived?: boolean
+  suppliesDescription?: string
+  observations?: string
 }
 
 export const statusTranslations = {
