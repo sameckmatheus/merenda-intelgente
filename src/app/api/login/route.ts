@@ -24,8 +24,8 @@ export async function POST(request: Request) {
       expiresIn,
     });
 
-    const cookieStore = cookies();
-    cookieStore.set(AUTH_COOKIE_NAME, sessionCookie, {
+  const cookieStore = await cookies();
+  cookieStore.set(AUTH_COOKIE_NAME, sessionCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       path: '/',

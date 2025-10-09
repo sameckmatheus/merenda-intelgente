@@ -8,7 +8,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 initAdmin();
 
 async function requireAuth() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(AUTH_COOKIE_NAME);
   if (!sessionCookie) return null;
   try {
@@ -21,8 +21,9 @@ async function requireAuth() {
 
 export async function PATCH(
   _request: Request,
-  { params }: { params: { id: string } }
+  context: any
 ) {
+  const { params } = context || {};
   const authed = await requireAuth();
   if (!authed) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Submission } from '@/app/admin/page';
+import type { Submission } from '@/lib/types';
 import { Logo } from '@/components/logo';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -110,7 +110,11 @@ export default function SubmissionReceipt() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
               <DetailItem label="Escola" value={submission.school} />
               <DetailItem label="Responsável" value={submission.respondentName} />
-              <DetailItem label="Data do Registro" value={format(submission.date.toDate(), 'PPP', { locale: ptBR })} />
+              <DetailItem label="Data do Registro" value={
+                (submission.date && typeof (submission.date as any)?.toDate === 'function')
+                  ? format((submission.date as any).toDate(), 'PPP', { locale: ptBR })
+                  : format(new Date(submission.date as any), 'PPP', { locale: ptBR })
+              } />
               <DetailItem label="Turno" value={submission.shift} />
             </div>
           </section>

@@ -4,12 +4,19 @@ import { getAuth } from 'firebase-admin/auth';
 import { initAdmin } from '@/lib/firebase-admin';
 import { AUTH_COOKIE_NAME } from '@/lib/constants';
 import { getFirestore, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
-import PDFDocument from 'pdfkit';
+// Use dynamic require for optional dependency to avoid TS errors when types are not installed
+let PDFDocument: any;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  PDFDocument = require('pdfkit');
+} catch (e) {
+  PDFDocument = undefined;
+}
 
 initAdmin();
 
 async function requireAuth() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(AUTH_COOKIE_NAME);
   if (!sessionCookie) return null;
   try {
@@ -44,6 +51,10 @@ export async function GET(request: Request) {
     }
     const snapshot = await q.get();
     const submissions = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+    if (!PDFDocument) {
+      return NextResponse.json({ error: 'PDF generation not available' }, { status: 500 });
+    }
 
     const doc = new PDFDocument({ margin: 40 });
     const chunks: Uint8Array[] = [];
@@ -103,20 +114,20 @@ export async function GET(request: Request) {
     });
 
     doc.end();
-    const buffers: Buffer[] = [];
-    return new Promise((resolve) => {
-      (stream as any).on('data', (chunk: Buffer) => buffers.push(chunk));
-      (stream as any).on('end', () => {
-        const pdf = Buffer.concat(buffers);
-        resolve(new NextResponse(pdf, {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': 'attachment; filename="relatorio-geral.pdf"',
-            'Cache-Control': 'no-store',
-          },
-        }));
-      });
+    const pdfBuffer: Buffer = await new Promise<Buffer>((resolve, reject) => {
+      (stream as any).on('data', (chunk: Buffer) => chunks.push(chunk));
+      (stream as any).on('end', () => resolve(Buffer.concat(chunks)));
+      (stream as any).on('error', (err: any) => reject(err));
+    });
+
+    const body = new Uint8Array(pdfBuffer as any);
+    return new NextResponse(body, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="relatorio-geral.pdf"',
+        'Cache-Control': 'no-store',
+      },
     });
   } catch (e) {
     console.error('GET /api/reports/general error', e);

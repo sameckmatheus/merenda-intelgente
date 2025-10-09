@@ -7,7 +7,7 @@ import {initAdmin} from '@/lib/firebase-admin';
 initAdmin();
 
 export async function POST(request: Request) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(AUTH_COOKIE_NAME);
 
   if (sessionCookie) {

@@ -7,7 +7,7 @@ import {AUTH_COOKIE_NAME} from '@/lib/constants';
 initAdmin();
 
 export async function GET() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(AUTH_COOKIE_NAME);
 
   if (!sessionCookie) {
