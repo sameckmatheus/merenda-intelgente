@@ -347,33 +347,33 @@ export default function AdminReports() {
               <p className="text-muted-foreground">Gráficos de acompanhamento dos registros.</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={handleExportHighResPNG}>Exportar PNG (alta)</Button>
-              <Button variant="outline" onClick={handleExportPDF}>Exportar PDF</Button>
-              <Button variant="default" onClick={handleExportCSV}><Download className="mr-2 h-4 w-4" />CSV</Button>
+              <Button variant="secondary" size="sm" onClick={handleExportHighResPNG}>PNG (alta)</Button>
+              <Button variant="outline" size="sm" onClick={handleExportPDF}>PDF</Button>
+              <Button variant="default" size="sm" onClick={handleExportCSV}><Download className="mr-2 h-4 w-4" />CSV</Button>
             </div>
           </div>
         </header>
 
         <main className="p-4 md:p-8">
           {/* KPI cards row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-4 mb-6">
-            <Card>
-              <CardContent>
-                <div className="text-sm text-muted-foreground">Total de Registros</div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-4 mb-6 items-stretch">
+            <Card className="h-24 flex items-center">
+              <CardContent className="px-4 py-3">
+                <div className="text-sm text-muted-foreground flex items-center gap-2"><FileText className="h-4 w-4"/> Total de Registros</div>
                 <div className="text-2xl font-bold">{totalRecords}</div>
                 <div className="text-xs text-muted-foreground">no período selecionado</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent>
-                <div className="text-sm text-muted-foreground">Pedidos de Ajuda</div>
+            <Card className="h-24 flex items-center">
+              <CardContent className="px-4 py-3">
+                <div className="text-sm text-muted-foreground flex items-center gap-2"><HelpCircle className="h-4 w-4"/> Pedidos de Ajuda</div>
                 <div className="text-2xl font-bold">{totalHelp}</div>
                 <div className="text-xs text-muted-foreground">itens em falta</div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent>
-                <div className="text-sm text-muted-foreground">Compras Realizadas</div>
+            <Card className="h-24 flex items-center">
+              <CardContent className="px-4 py-3">
+                <div className="text-sm text-muted-foreground flex items-center gap-2"><ShoppingCart className="h-4 w-4"/> Compras Realizadas</div>
                 <div className="text-2xl font-bold">{totalPurchased}</div>
                 <div className="text-xs text-muted-foreground">compras registradas</div>
               </CardContent>
@@ -383,17 +383,17 @@ export default function AdminReports() {
           {/* Main grid: left large chart, right widgets */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div className="lg:col-span-2">
-              <Card className="h-[36rem]">
+              <Card className="h-[28rem]">
                 <CardHeader>
                   <CardTitle>Registros no Período</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {isLoading ? (
-                    <div className="h-72 flex items-center justify-center">Carregando...</div>
+                    <div className="h-56 flex items-center justify-center">Carregando...</div>
                   ) : (
-                    <div className="h-72">
+                    <div className="h-56">
                       <ChartContainer className="h-full" config={{ series: { color: '#3b82f6' } }}>
-                        <LineChart data={timeSeries} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+                        <LineChart data={timeSeries} margin={{ top: 8, right: 10, left: 8, bottom: 8 }}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="date" />
                           <YAxis />
@@ -415,13 +415,13 @@ export default function AdminReports() {
                 </CardHeader>
                 <CardContent>
                   {isLoading ? (
-                    <div className="h-48 flex items-center justify-center">Carregando...</div>
+                    <div className="h-40 flex items-center justify-center">Carregando...</div>
                   ) : (
-                    <div className="h-48 flex items-center gap-6">
+                    <div className="h-40 flex items-center gap-6">
                       <div className="flex-1 h-full flex items-center justify-center">
                         <ChartContainer className="h-full w-full" config={{ pendente: { color: STATUS_COLORS.pendente }, confirmado: { color: STATUS_COLORS.confirmado }, cancelado: { color: STATUS_COLORS.cancelado } }}>
                           <PieChart>
-                            <Pie data={statusData} dataKey="value" nameKey="name" innerRadius={40} outerRadius={70} label />
+                            <Pie data={statusData} dataKey="value" nameKey="name" innerRadius={36} outerRadius={64} label />
                             {statusData.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as keyof typeof STATUS_COLORS]} />
                             ))}
