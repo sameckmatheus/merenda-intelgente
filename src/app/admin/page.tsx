@@ -122,7 +122,12 @@ export default function AdminDashboard() {
   const handleDelete = async (submissionId: string) => {
     setIsDeleting(true);
     try {
-      await deleteDoc(doc(db, "submissions", submissionId));
+      const res = await fetch(`/api/submissions/${submissionId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        throw new Error('Falha ao excluir');
+      }
       setSubmissions(submissions.filter(sub => sub.id !== submissionId));
       toast({
         title: "Registro Excluído",
