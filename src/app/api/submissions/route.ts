@@ -8,11 +8,12 @@ import { getFirestore, Timestamp as AdminTimestamp } from 'firebase-admin/firest
 initAdmin();
 
 async function requireAuth() {
-  const cookieStore = cookies();
-  const sessionCookie = cookieStore.get(AUTH_COOKIE_NAME);
+  // cookies() can be async in some Next.js versions/TS types
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get?.(AUTH_COOKIE_NAME) || cookieStore.get(AUTH_COOKIE_NAME as any);
   if (!sessionCookie) return null;
   try {
-    const decoded = await getAuth().verifySessionCookie(sessionCookie.value, true);
+    const decoded = await getAuth().verifySessionCookie((sessionCookie as any).value, true);
     return decoded;
   } catch {
     return null;
@@ -32,19 +33,34 @@ export async function GET(request: Request) {
     const school = searchParams.get('school');
 
     const db = getFirestore();
-    let q = db.collection('submissions') as FirebaseFirestore.Query<FirebaseFirestore.DocumentData>;
+    const collectionRef = db.collection('submissions') as FirebaseFirestore.CollectionReference<FirebaseFirestore.DocumentData>;
+    let q: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = collectionRef;
 
     if (start && end) {
       q = q
         .where('date', '>=', AdminTimestamp.fromMillis(Number(start)))
         .where('date', '<=', AdminTimestamp.fromMillis(Number(end)));
     }
+
+    // If both date range and school are provided, Firestore may require a composite index
+    // for combining range queries with equality on another field. To avoid forcing an
+    // index, run the date-range query and filter by school locally. If only school is
+    // provided, query by school directly.
+    let docs: FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>[] = [];
     if (school && school !== 'all') {
-      q = q.where('school', '==', school);
+      if (start && end) {
+        const snapshot = await q.get();
+        docs = snapshot.docs.filter((d) => (d.data()?.school || '') === school);
+      } else {
+        const snapshot = await collectionRef.where('school', '==', school).get();
+        docs = snapshot.docs;
+      }
+    } else {
+      const snapshot = await q.get();
+      docs = snapshot.docs;
     }
 
-    const snapshot = await q.get();
-    const submissions = snapshot.docs
+    const submissions = docs
       .map((doc) => {
         const d = doc.data();
         return {
