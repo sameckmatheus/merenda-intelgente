@@ -3,11 +3,15 @@
 import { useMemo, useState, useEffect } from "react";
 import { AdminSidebar } from "@/components/admin/sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, FileText, ShoppingCart, HelpCircle } from 'lucide-react';
-import { ChartContainer } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend } from "recharts";
+import { Download, FileText, ShoppingCart, HelpCircle, Menu } from 'lucide-react';
+import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend, AreaChart, Area } from "recharts";
 import { Button } from "@/components/ui/button";
 import { useRef } from "react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { menuItems } from "@/components/admin/sidebar";
 
 const schools = [
   "ANEXO MARCOS FREIRE",
@@ -136,6 +140,8 @@ export default function AdminReports() {
 
   // Raw submissions for time series and recent activity
   const [submissionsRaw, setSubmissionsRaw] = useState<any[]>([]);
+  // chart type toggle
+  const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('line');
 
   // time series data (daily counts)
   const [timeSeries, setTimeSeries] = useState<{ date: string; label: string; count: number }[]>([]);
@@ -357,7 +363,51 @@ export default function AdminReports() {
       <div className="md:pl-72">
         <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-sm">
           <div className="flex h-16 items-center justify-between px-4">
-            <div>
+            <div className="flex items-center gap-2">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menu">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-72 p-0">
+                  <SheetHeader className="px-4 py-3 border-b">
+                    <SheetTitle>MenuPlanner</SheetTitle>
+                  </SheetHeader>
+                  <nav className="space-y-2 p-4">
+                    {menuItems.map((item: { title: string; icon: any; href: string }) => {
+                      const pathname = usePathname();
+                      const isActive = pathname === item.href;
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={`${isActive ? 'bg-accent' : 'transparent'} flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent`}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {item.title}
+                        </Link>
+                      );
+                    })}
+                  </nav>
+                  <div className="px-4 pb-4">
+                    <AdminSidebar
+                      date={date}
+                      setDate={setDate}
+                      filterType={filterType}
+                      setFilterType={setFilterType}
+                      selectedSchool={selectedSchool}
+                      setSelectedSchool={setSelectedSchool}
+                      selectedStatus={selectedStatusFilter}
+                      setSelectedStatus={setSelectedStatusFilter}
+                      helpNeededFilter={helpNeededFilter}
+                      setHelpNeededFilter={setHelpNeededFilter}
+                      schools={schools}
+                      statusTranslations={{ pendente: 'Pendente', confirmado: 'Confirmado', cancelado: 'Cancelado' }}
+                    />
+                  </div>
+                </SheetContent>
+              </Sheet>
               <h2 className="font-headline text-xl font-bold tracking-tight text-foreground">Relatórios</h2>
               <p className="text-muted-foreground">Gráficos de acompanhamento dos registros.</p>
             </div>
@@ -398,37 +448,58 @@ export default function AdminReports() {
           {/* Main grid: left large chart, right widgets */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div className="lg:col-span-2">
-              <Card className="h-52 md:h-72 lg:h-96">
+              <Card className="h-64 md:h-80 lg:h-96">
                 <CardHeader>
-                  <CardTitle>Registros no Período</CardTitle>
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle>Registros no Período</CardTitle>
+                    <div className="flex items-center gap-1">
+                      <Button size="sm" variant={chartType==='line'?'default':'outline'} onClick={()=>setChartType('line')}>Linha</Button>
+                      <Button size="sm" variant={chartType==='bar'?'default':'outline'} onClick={()=>setChartType('bar')}>Barra</Button>
+                      <Button size="sm" variant={chartType==='area'?'default':'outline'} onClick={()=>setChartType('area')}>Área</Button>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {isLoading ? (
                     <div className="h-40 md:h-56 flex items-center justify-center">Carregando...</div>
                   ) : (
-                    <div className="h-40 md:h-56 lg:h-72">
-                      <ChartContainer className="h-full" config={{ series: { color: '#3b82f6' } }}>
+                    <div className="h-48 md:h-60 lg:h-72">
+                      <ChartContainer className="h-full w-full" config={{ series: { color: '#3b82f6' } }}>
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={timeSeries} margin={{ top: 6, right: 8, left: 6, bottom: 6 }}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis
-                              dataKey="label"
-                              interval={Math.max(0, Math.floor(timeSeries.length / 6))}
-                              tick={{ fontSize: 11 }}
-                            />
-                            <YAxis />
-                            <Tooltip
-                              labelFormatter={(_, payload) => {
-                                const p = payload && payload[0];
-                                const iso = (p && p.payload && p.payload.date) || undefined;
-                                if (!iso) return '';
-                                const d = new Date(iso);
-                                return d.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
-                              }}
-                            />
-                            <Legend />
-                            <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
-                          </LineChart>
+                          {chartType === 'line' ? (
+                            <LineChart data={timeSeries} margin={{ top: 8, right: 12, left: 8, bottom: 8 }}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="label" interval={Math.max(0, Math.floor(timeSeries.length / 6))} tick={{ fontSize: 11 }} height={28} />
+                              <YAxis width={40} />
+                              <ChartTooltip content={<ChartTooltipContent labelKey="label" />} labelFormatter={(_, p)=>{
+                                const iso = p?.[0]?.payload?.date; if(!iso) return ''; return new Date(iso).toLocaleDateString();
+                              }} />
+                              <ChartLegend content={<ChartLegendContent />} />
+                              <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
+                            </LineChart>
+                          ) : chartType === 'bar' ? (
+                            <BarChart data={timeSeries} margin={{ top: 8, right: 12, left: 8, bottom: 8 }}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="label" interval={Math.max(0, Math.floor(timeSeries.length / 6))} tick={{ fontSize: 11 }} height={28} />
+                              <YAxis width={40} />
+                              <ChartTooltip content={<ChartTooltipContent labelKey="label" />} labelFormatter={(_, p)=>{
+                                const iso = p?.[0]?.payload?.date; if(!iso) return ''; return new Date(iso).toLocaleDateString();
+                              }} />
+                              <ChartLegend content={<ChartLegendContent />} />
+                              <Bar dataKey="count" fill="#3b82f6" radius={[4,4,0,0]} />
+                            </BarChart>
+                          ) : (
+                            <AreaChart data={timeSeries} margin={{ top: 8, right: 12, left: 8, bottom: 8 }}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="label" interval={Math.max(0, Math.floor(timeSeries.length / 6))} tick={{ fontSize: 11 }} height={28} />
+                              <YAxis width={40} />
+                              <ChartTooltip content={<ChartTooltipContent labelKey="label" />} labelFormatter={(_, p)=>{
+                                const iso = p?.[0]?.payload?.date; if(!iso) return ''; return new Date(iso).toLocaleDateString();
+                              }} />
+                              <ChartLegend content={<ChartLegendContent />} />
+                              <Area type="monotone" dataKey="count" stroke="#3b82f6" fill="#93c5fd" fillOpacity={0.5} />
+                            </AreaChart>
+                          )}
                         </ResponsiveContainer>
                       </ChartContainer>
                     </div>
