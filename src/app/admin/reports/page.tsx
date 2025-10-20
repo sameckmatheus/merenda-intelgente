@@ -32,6 +32,12 @@ const schools = [
   "ZULEIDE",
 ];
 
+// Paleta de cores para séries por escola
+const SCHOOL_COLORS = [
+  '#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+  '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#22c55e'
+];
+
 const STATUS_COLORS = {
   pendente: '#f59e0b',
   confirmado: '#10b981',
@@ -143,8 +149,10 @@ export default function AdminReports() {
   // chart type toggle
   const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('line');
 
-  // time series data (daily counts)
-  const [timeSeries, setTimeSeries] = useState<{ date: string; label: string; count: number }[]>([]);
+  // time series data por escola
+  const [timeSeries, setTimeSeries] = useState<Array<{ date: string; label: string; count: number; [k: string]: any }>>([]);
+  const [seriesKeys, setSeriesKeys] = useState<string[]>([]);
+  const [seriesColors, setSeriesColors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     // fetch raw submissions in addition to summary for time series and KPIs
@@ -191,26 +199,51 @@ export default function AdminReports() {
         const raws = json.submissions || [];
         setSubmissionsRaw(raws);
 
-        // build time series grouped by day
-        const map: Record<string, number> = {};
+        // Agrupar por dia e escola
+        const countsByDayAndSchool: Record<string, Record<string, number>> = {};
+        const totalBySchool: Record<string, number> = {};
         raws.forEach((r: any) => {
           const ts = typeof r.date === 'number' ? new Date(r.date) : new Date(r.date?.toMillis?.() || r.date || Date.now());
           const key = `${ts.getFullYear()}-${String(ts.getMonth()+1).padStart(2,'0')}-${String(ts.getDate()).padStart(2,'0')}`;
-          map[key] = (map[key] || 0) + 1;
+          const school = r.school || 'Sem Escola';
+          countsByDayAndSchool[key] = countsByDayAndSchool[key] || {};
+          countsByDayAndSchool[key][school] = (countsByDayAndSchool[key][school] || 0) + 1;
+          totalBySchool[school] = (totalBySchool[school] || 0) + 1;
         });
 
-        // build array for interval between start and end
-        let series: { date: string; label: string; count: number }[] = [];
+        // Selecionar top N escolas do período e agrupar o resto em "Outras"
+        const TOP_N = 5;
+        const sortedSchools = Object.entries(totalBySchool).sort((a,b) => b[1]-a[1]).map(([name]) => name);
+        const topSchools = sortedSchools.slice(0, TOP_N);
+        const hasOthers = sortedSchools.length > TOP_N;
+        const seriesList = hasOthers ? [...topSchools, 'Outras'] : [...topSchools];
+        const colorMap: Record<string, string> = {};
+        seriesList.forEach((k, idx) => { colorMap[k] = SCHOOL_COLORS[idx % SCHOOL_COLORS.length]; });
+
+        // build array for interval between start and end, preenchendo cada série
+        let series: Array<{ date: string; label: string; count: number; [k: string]: any }> = [];
         if (start !== null && end !== null) {
           for (let t = start; t <= end; t += 24*60*60*1000) {
             const d = new Date(t);
             const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            // Use ISO date for parsing safety and a human label separately
-            series.push({
-              date: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
+            const dayEntry = countsByDayAndSchool[key] || {};
+            const totalForDay = Object.values(dayEntry).reduce((s, v) => s + (v || 0), 0);
+            const row: any = {
+              date: key,
               label: `${d.getDate()}/${String(d.getMonth()+1).padStart(2,'0')}`,
-              count: map[key] || 0
+              count: totalForDay,
+            };
+            seriesList.forEach((sKey) => {
+              if (sKey === 'Outras') {
+                const others = Object.entries(dayEntry)
+                  .filter(([school]) => !topSchools.includes(school))
+                  .reduce((acc, [, v]) => acc + (v || 0), 0);
+                row['Outras'] = others;
+              } else {
+                row[sKey] = dayEntry[sKey] || 0;
+              }
             });
+            series.push(row);
           }
         } else {
           // default last 7 days
@@ -219,14 +252,29 @@ export default function AdminReports() {
             const d = new Date();
             d.setDate(today.getDate() - i);
             const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            series.push({
-              date: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
+            const dayEntry = countsByDayAndSchool[key] || {};
+            const totalForDay = Object.values(dayEntry).reduce((s, v) => s + (v || 0), 0);
+            const row: any = {
+              date: key,
               label: `${d.getDate()}/${String(d.getMonth()+1).padStart(2,'0')}`,
-              count: map[key] || 0
+              count: totalForDay,
+            };
+            seriesList.forEach((sKey) => {
+              if (sKey === 'Outras') {
+                const others = Object.entries(dayEntry)
+                  .filter(([school]) => !topSchools.includes(school))
+                  .reduce((acc, [, v]) => acc + (v || 0), 0);
+                row['Outras'] = others;
+              } else {
+                row[sKey] = dayEntry[sKey] || 0;
+              }
             });
+            series.push(row);
           }
         }
         setTimeSeries(series);
+        setSeriesKeys(seriesList);
+        setSeriesColors(colorMap);
       } catch (e) {
         console.error('Erro ao buscar raw submissions', e);
       }
@@ -464,7 +512,7 @@ export default function AdminReports() {
                     <div className="h-40 md:h-56 flex items-center justify-center">Carregando...</div>
                   ) : (
                     <div className="h-48 md:h-60 lg:h-72">
-                      <ChartContainer className="h-full w-full" config={{ series: { color: '#3b82f6' } }}>
+                      <ChartContainer className="h-full w-full" config={Object.fromEntries(seriesKeys.map((k) => [k, { label: k, color: seriesColors[k] }]))}>
                         <ResponsiveContainer width="100%" height="100%">
                           {chartType === 'line' ? (
                             <LineChart data={timeSeries} margin={{ top: 8, right: 12, left: 8, bottom: 8 }}>
@@ -475,7 +523,9 @@ export default function AdminReports() {
                                 const iso = p?.[0]?.payload?.date; if(!iso) return ''; return new Date(iso).toLocaleDateString();
                               }} />
                               <ChartLegend content={<ChartLegendContent />} />
-                              <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
+                              {seriesKeys.map((k) => (
+                                <Line key={k} type="monotone" dataKey={k} stroke={seriesColors[k]} strokeWidth={2} dot={{ r: 2 }} />
+                              ))}
                             </LineChart>
                           ) : chartType === 'bar' ? (
                             <BarChart data={timeSeries} margin={{ top: 8, right: 12, left: 8, bottom: 8 }}>
@@ -486,7 +536,9 @@ export default function AdminReports() {
                                 const iso = p?.[0]?.payload?.date; if(!iso) return ''; return new Date(iso).toLocaleDateString();
                               }} />
                               <ChartLegend content={<ChartLegendContent />} />
-                              <Bar dataKey="count" fill="#3b82f6" radius={[4,4,0,0]} />
+                              {seriesKeys.map((k) => (
+                                <Bar key={k} dataKey={k} stackId="a" fill={seriesColors[k]} radius={[4,4,0,0]} />
+                              ))}
                             </BarChart>
                           ) : (
                             <AreaChart data={timeSeries} margin={{ top: 8, right: 12, left: 8, bottom: 8 }}>
@@ -497,7 +549,9 @@ export default function AdminReports() {
                                 const iso = p?.[0]?.payload?.date; if(!iso) return ''; return new Date(iso).toLocaleDateString();
                               }} />
                               <ChartLegend content={<ChartLegendContent />} />
-                              <Area type="monotone" dataKey="count" stroke="#3b82f6" fill="#93c5fd" fillOpacity={0.5} />
+                              {seriesKeys.map((k) => (
+                                <Area key={k} type="monotone" dataKey={k} stroke={seriesColors[k]} fill={seriesColors[k]} fillOpacity={0.3} />
+                              ))}
                             </AreaChart>
                           )}
                         </ResponsiveContainer>
