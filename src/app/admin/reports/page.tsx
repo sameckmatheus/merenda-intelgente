@@ -1,17 +1,13 @@
 "use client"
 
 import { useMemo, useState, useEffect } from "react";
-import { AdminSidebar } from "@/components/admin/sidebar";
+import { AdminLayout } from "@/components/admin/admin-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, FileText, ShoppingCart, HelpCircle, Menu } from 'lucide-react';
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend, AreaChart, Area } from "recharts";
 import { Button } from "@/components/ui/button";
 import { useRef } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { menuItems } from "@/components/admin/sidebar";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const schools = [
@@ -157,11 +153,14 @@ export default function AdminReports() {
   const [submissionsRaw, setSubmissionsRaw] = useState<any[]>([]);
   // chart type toggle
   const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('line');
+  // metric selector
+  const [metricType, setMetricType] = useState<'total' | 'confirmed'>('total');
 
   // time series data por escola
   const [timeSeries, setTimeSeries] = useState<Array<{ date: string; label: string; count: number; [k: string]: any }>>([]);
   const [seriesKeys, setSeriesKeys] = useState<string[]>([]);
   const [seriesColors, setSeriesColors] = useState<Record<string, string>>({});
+  const [enabledSeries, setEnabledSeries] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     // fetch raw submissions in addition to summary for time series and KPIs
@@ -215,17 +214,20 @@ export default function AdminReports() {
           const ts = typeof r.date === 'number' ? new Date(r.date) : new Date(r.date?.toMillis?.() || r.date || Date.now());
           const key = `${ts.getFullYear()}-${String(ts.getMonth()+1).padStart(2,'0')}-${String(ts.getDate()).padStart(2,'0')}`;
           const school = r.school || 'Sem Escola';
+          const isConfirmed = r.status === 'confirmado';
+          
+          // Filtrar por métrica selecionada
+          if (metricType === 'confirmed' && !isConfirmed) return;
+          
           countsByDayAndSchool[key] = countsByDayAndSchool[key] || {};
           countsByDayAndSchool[key][school] = (countsByDayAndSchool[key][school] || 0) + 1;
           totalBySchool[school] = (totalBySchool[school] || 0) + 1;
         });
 
-        // Selecionar top N escolas do período e agrupar o resto em "Outras"
-        const TOP_N = 5;
-        const sortedSchools = Object.entries(totalBySchool).sort((a,b) => b[1]-a[1]).map(([name]) => name);
-        const topSchools = sortedSchools.slice(0, TOP_N);
-        const hasOthers = sortedSchools.length > TOP_N;
-        const seriesList = hasOthers ? [...topSchools, 'Outras'] : [...topSchools];
+        // Todas as escolas do período (ordenadas por volume)
+        const seriesList = Object.entries(totalBySchool)
+          .sort((a, b) => b[1] - a[1])
+          .map(([name]) => name);
         const colorMap: Record<string, string> = {};
         seriesList.forEach((k, idx) => { colorMap[k] = SCHOOL_COLORS[idx % SCHOOL_COLORS.length]; });
 
@@ -243,14 +245,7 @@ export default function AdminReports() {
               count: totalForDay,
             };
             seriesList.forEach((sKey) => {
-              if (sKey === 'Outras') {
-                const others = Object.entries(dayEntry)
-                  .filter(([school]) => !topSchools.includes(school))
-                  .reduce((acc, [, v]) => acc + (v || 0), 0);
-                row['Outras'] = others;
-              } else {
-                row[sKey] = dayEntry[sKey] || 0;
-              }
+              row[sKey] = dayEntry[sKey] || 0;
             });
             series.push(row);
           }
@@ -269,14 +264,7 @@ export default function AdminReports() {
               count: totalForDay,
             };
             seriesList.forEach((sKey) => {
-              if (sKey === 'Outras') {
-                const others = Object.entries(dayEntry)
-                  .filter(([school]) => !topSchools.includes(school))
-                  .reduce((acc, [, v]) => acc + (v || 0), 0);
-                row['Outras'] = others;
-              } else {
-                row[sKey] = dayEntry[sKey] || 0;
-              }
+              row[sKey] = dayEntry[sKey] || 0;
             });
             series.push(row);
           }
@@ -284,12 +272,18 @@ export default function AdminReports() {
         setTimeSeries(series);
         setSeriesKeys(seriesList);
         setSeriesColors(colorMap);
+        setEnabledSeries((prev) => {
+          const next: Record<string, boolean> = { ...prev };
+          seriesList.forEach(k => { if (next[k] === undefined) next[k] = true; });
+          Object.keys(next).forEach(k => { if (!seriesList.includes(k)) delete next[k]; });
+          return next;
+        });
       } catch (e) {
         console.error('Erro ao buscar raw submissions', e);
       }
     };
     fetchRaw();
-  }, [date, filterType, selectedSchool, selectedStatusFilter, helpNeededFilter]);
+  }, [date, filterType, selectedSchool, selectedStatusFilter, helpNeededFilter, metricType]);
 
   // recompute percentages for pie legend
   const statusWithPercent = useMemo(() => {
@@ -400,83 +394,32 @@ export default function AdminReports() {
     .slice(0, 3);
 
 
+  const exportActions = (
+    <>
+      <Button variant="secondary" size="sm" className="px-2 py-1 text-sm" onClick={handleExportHighResPNG} aria-label="Exportar PNG em alta resolução">PNG</Button>
+      <Button variant="outline" size="sm" className="px-2 py-1 text-sm" onClick={handleExportPDF} aria-label="Exportar PDF">PDF</Button>
+      <Button variant="default" size="sm" className="px-2 py-1 text-sm" onClick={handleExportCSV} aria-label="Exportar CSV"><Download className="mr-2 h-4 w-4" />CSV</Button>
+    </>
+  );
+
   return (
-    <div className="min-h-screen w-full bg-slate-50">
-      <AdminSidebar
-        date={date}
-        setDate={setDate}
-        filterType={filterType}
-        setFilterType={setFilterType}
-        selectedSchool={selectedSchool}
-        setSelectedSchool={setSelectedSchool}
-        selectedStatus={selectedStatusFilter}
-        setSelectedStatus={setSelectedStatusFilter}
-        helpNeededFilter={helpNeededFilter}
-        setHelpNeededFilter={setHelpNeededFilter}
-        schools={schools}
-        statusTranslations={{ pendente: 'Pendente', confirmado: 'Confirmado', cancelado: 'Cancelado' }}
-      />
-
-      <div className="md:pl-72">
-        <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-sm">
-          <div className="flex h-16 items-center justify-between px-4">
-            <div className="flex items-center gap-2">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menu">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-72 p-0">
-                  <SheetHeader className="px-4 py-3 border-b">
-                    <SheetTitle>MenuPlanner</SheetTitle>
-                  </SheetHeader>
-                  <nav className="space-y-2 p-4">
-                    {menuItems.map((item: { title: string; icon: any; href: string }) => {
-                      const pathname = usePathname();
-                      const isActive = pathname === item.href;
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className={`${isActive ? 'bg-accent' : 'transparent'} flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent`}
-                        >
-                          <item.icon className="h-4 w-4" />
-                          {item.title}
-                        </Link>
-                      );
-                    })}
-                  </nav>
-                  <div className="px-4 pb-4">
-                    <AdminSidebar
-                      date={date}
-                      setDate={setDate}
-                      filterType={filterType}
-                      setFilterType={setFilterType}
-                      selectedSchool={selectedSchool}
-                      setSelectedSchool={setSelectedSchool}
-                      selectedStatus={selectedStatusFilter}
-                      setSelectedStatus={setSelectedStatusFilter}
-                      helpNeededFilter={helpNeededFilter}
-                      setHelpNeededFilter={setHelpNeededFilter}
-                      schools={schools}
-                      statusTranslations={{ pendente: 'Pendente', confirmado: 'Confirmado', cancelado: 'Cancelado' }}
-                    />
-                  </div>
-                </SheetContent>
-              </Sheet>
-              <h2 className="font-headline text-xl font-bold tracking-tight text-foreground">Relatórios</h2>
-              <p className="text-muted-foreground">Gráficos de acompanhamento dos registros.</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" className="px-2 py-1 text-sm" onClick={handleExportHighResPNG} aria-label="Exportar PNG em alta resolução">PNG</Button>
-              <Button variant="outline" size="sm" className="px-2 py-1 text-sm" onClick={handleExportPDF} aria-label="Exportar PDF">PDF</Button>
-              <Button variant="default" size="sm" className="px-2 py-1 text-sm" onClick={handleExportCSV} aria-label="Exportar CSV"><Download className="mr-2 h-4 w-4" />CSV</Button>
-            </div>
-          </div>
-        </header>
-
-        <main className="p-4 md:p-8">
+    <AdminLayout
+      title="Relatórios"
+      description="Gráficos de acompanhamento dos registros"
+      actions={exportActions}
+      date={date}
+      setDate={setDate}
+      filterType={filterType}
+      setFilterType={setFilterType}
+      selectedSchool={selectedSchool}
+      setSelectedSchool={setSelectedSchool}
+      selectedStatus={selectedStatusFilter}
+      setSelectedStatus={setSelectedStatusFilter}
+      helpNeededFilter={helpNeededFilter}
+      setHelpNeededFilter={setHelpNeededFilter}
+      schools={schools}
+      statusTranslations={{ pendente: 'Pendente', confirmado: 'Confirmado', cancelado: 'Cancelado' }}
+    >
           {/* KPI cards row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-4 mb-6 items-stretch">
             <Card className="h-24 flex items-center">
@@ -509,11 +452,32 @@ export default function AdminReports() {
                 <CardHeader>
                   <div className="flex items-center justify-between gap-2">
                     <CardTitle>Registros no Período</CardTitle>
-                    <div className="flex items-center gap-1">
-                      <Button size="sm" variant={chartType==='line'?'default':'outline'} onClick={()=>setChartType('line')}>Linha</Button>
-                      <Button size="sm" variant={chartType==='bar'?'default':'outline'} onClick={()=>setChartType('bar')}>Barra</Button>
-                      <Button size="sm" variant={chartType==='area'?'default':'outline'} onClick={()=>setChartType('area')}>Área</Button>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="outline">Opções</Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-64">
+                        <DropdownMenuLabel>Tipo do gráfico</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={chartType} onValueChange={(v)=>setChartType(v as any)}>
+                          <DropdownMenuRadioItem value="line">Linha</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="bar">Barras</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="area">Área</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel>Métrica</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup value={metricType} onValueChange={(v)=>setMetricType(v as any)}>
+                          <DropdownMenuRadioItem value="total">Total</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="confirmed">Confirmados</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel>Escolas</DropdownMenuLabel>
+                        {seriesKeys.map((k)=> (
+                          <DropdownMenuCheckboxItem key={k} checked={!!enabledSeries[k]} onCheckedChange={(c)=>setEnabledSeries(s=>({ ...s, [k]: !!c }))}>
+                            {k}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -532,8 +496,8 @@ export default function AdminReports() {
                                 const iso = p?.[0]?.payload?.date; if(!iso) return ''; return new Date(iso).toLocaleDateString();
                               }} />
                               <ChartLegend content={<ChartLegendContent />} />
-                              {seriesKeys.map((k) => (
-                                <Line key={k} type="monotone" dataKey={k} stroke={seriesColors[k]} strokeWidth={2} dot={{ r: 2 }} />
+                              {seriesKeys.filter(k=>enabledSeries[k]).map((k) => (
+                                <Line key={k} type="monotone" dataKey={k} stroke={seriesColors[k]} strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                               ))}
                             </LineChart>
                           ) : chartType === 'bar' ? (
@@ -545,8 +509,8 @@ export default function AdminReports() {
                                 const iso = p?.[0]?.payload?.date; if(!iso) return ''; return new Date(iso).toLocaleDateString();
                               }} />
                               <ChartLegend content={<ChartLegendContent />} />
-                              {seriesKeys.map((k) => (
-                                <Bar key={k} dataKey={k} stackId="a" fill={seriesColors[k]} radius={[4,4,0,0]} />
+                              {seriesKeys.filter(k=>enabledSeries[k]).map((k) => (
+                                <Bar key={k} dataKey={k} fill={seriesColors[k]} radius={[4,4,0,0]} />
                               ))}
                             </BarChart>
                           ) : (
@@ -558,9 +522,17 @@ export default function AdminReports() {
                                 const iso = p?.[0]?.payload?.date; if(!iso) return ''; return new Date(iso).toLocaleDateString();
                               }} />
                               <ChartLegend content={<ChartLegendContent />} />
-                              {seriesKeys.map((k) => (
-                                <Area key={k} type="monotone" dataKey={k} stroke={seriesColors[k]} fill={seriesColors[k]} fillOpacity={0.3} />
+                              {seriesKeys.filter(k=>enabledSeries[k]).map((k) => (
+                                <Area key={k} type="monotone" dataKey={k} stroke={seriesColors[k]} fill={`url(#gradient-${k})`} fillOpacity={0.6} strokeWidth={2} />
                               ))}
+                              <defs>
+                                {seriesKeys.filter(k=>enabledSeries[k]).map((k) => (
+                                  <linearGradient key={`gradient-${k}`} id={`gradient-${k}`} x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor={seriesColors[k]} stopOpacity={0.8}/>
+                                    <stop offset="95%" stopColor={seriesColors[k]} stopOpacity={0.1}/>
+                                  </linearGradient>
+                                ))}
+                              </defs>
                             </AreaChart>
                           )}
                         </ResponsiveContainer>
@@ -664,8 +636,6 @@ export default function AdminReports() {
               </CardContent>
             </Card>
           </div>
-        </main>
-      </div>
-    </div>
+    </AdminLayout>
   );
 }

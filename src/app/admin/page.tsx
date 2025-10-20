@@ -18,8 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Separator } from "@/components/ui/separator";
 
-import { AdminSidebar } from "@/components/admin/sidebar";
-import { Filters } from "@/components/admin/filters";
+import { AdminLayout } from "@/components/admin/admin-layout";
 import { SubmissionDetails } from "@/components/admin/submission-details";
 
 import { Filter, Submission, menuTypeTranslations, statusTranslations } from "@/lib/types";
@@ -215,9 +214,19 @@ export default function AdminDashboard() {
     return format(new Date(date), "dd/MM/yy");
   };
 
+  const logoutAction = (
+    <Button variant="outline" onClick={handleLogout}>
+      <LogOut className="w-4 h-4 mr-2" />
+      Sair
+    </Button>
+  );
+
   return (
-    <div className="min-h-screen w-full bg-slate-50">
-      <AdminSidebar
+    <>
+      <AdminLayout
+        title="Dashboard de Acompanhamento"
+        description="Visualize os registros de merenda e gere relatórios"
+        actions={logoutAction}
         date={date}
         setDate={setDate}
         filterType={filterType}
@@ -230,26 +239,7 @@ export default function AdminDashboard() {
         setHelpNeededFilter={setHelpNeededFilter}
         schools={schools}
         statusTranslations={statusTranslations}
-      />
-      <div className="md:pl-72">
-        <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-sm">
-          <div className="flex h-16 items-center justify-between px-4">
-            <div>
-              <h2 className="font-headline text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                Dashboard de Acompanhamento
-              </h2>
-              <p className="text-muted-foreground">Visualize os registros de merenda e gere relatórios.</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={handleLogout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Sair
-              </Button>
-            </div>
-          </div>
-        </header>
-
-        <main className="p-4 md:p-8">
+      >
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card>
@@ -375,8 +365,7 @@ export default function AdminDashboard() {
               </Card>
             )}
           </div>
-        </main>
-      </div>
+      </AdminLayout>
 
       {selectedSubmission && (
         <Dialog open={!!selectedSubmission} onOpenChange={(open) => !open && setSelectedSubmission(null)}>
@@ -388,7 +377,7 @@ export default function AdminDashboard() {
               <DialogDescription>
                 Registro de {selectedSubmission.respondentName} para o turno da {selectedSubmission.shift} em{' '}
                 {format(
-                  selectedSubmission.date instanceof Timestamp ? selectedSubmission.date.toDate() : new Date(selectedSubmission.date),
+                  selectedSubmission.date instanceof Timestamp ? selectedSubmission.date.toDate() : new Date(typeof selectedSubmission.date === 'number' ? selectedSubmission.date : selectedSubmission.date),
                   "PPP",
                   { locale: ptBR }
                 )}.
@@ -479,6 +468,6 @@ export default function AdminDashboard() {
           </DialogContent>
         </Dialog>
       )}
-    </div>
+    </>
   );
 }
