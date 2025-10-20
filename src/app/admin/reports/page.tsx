@@ -138,7 +138,7 @@ export default function AdminReports() {
   const [submissionsRaw, setSubmissionsRaw] = useState<any[]>([]);
 
   // time series data (daily counts)
-  const [timeSeries, setTimeSeries] = useState<{ date: string; count: number }[]>([]);
+  const [timeSeries, setTimeSeries] = useState<{ date: string; label: string; count: number }[]>([]);
 
   useEffect(() => {
     // fetch raw submissions in addition to summary for time series and KPIs
@@ -194,12 +194,17 @@ export default function AdminReports() {
         });
 
         // build array for interval between start and end
-        let series: { date: string; count: number }[] = [];
+        let series: { date: string; label: string; count: number }[] = [];
         if (start !== null && end !== null) {
           for (let t = start; t <= end; t += 24*60*60*1000) {
             const d = new Date(t);
             const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            series.push({ date: `${d.getDate()}/${String(d.getMonth()+1).padStart(2,'0')}`, count: map[key] || 0 });
+            // Use ISO date for parsing safety and a human label separately
+            series.push({
+              date: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
+              label: `${d.getDate()}/${String(d.getMonth()+1).padStart(2,'0')}`,
+              count: map[key] || 0
+            });
           }
         } else {
           // default last 7 days
@@ -208,7 +213,11 @@ export default function AdminReports() {
             const d = new Date();
             d.setDate(today.getDate() - i);
             const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            series.push({ date: `${d.getDate()}/${String(d.getMonth()+1).padStart(2,'0')}`, count: map[key] || 0 });
+            series.push({
+              date: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
+              label: `${d.getDate()}/${String(d.getMonth()+1).padStart(2,'0')}`,
+              count: map[key] || 0
+            });
           }
         }
         setTimeSeries(series);
@@ -317,7 +326,7 @@ export default function AdminReports() {
   const totalHelp = submissionsRaw.filter(s => s.helpNeeded).length;
   const totalPurchased = submissionsRaw.filter(s => s.itemsPurchased).length;
 
-  // recent activity (last 6)
+  // recent activity (last 3)
   const recentActivity = submissionsRaw
     .slice()
     .sort((a, b) => {
@@ -325,7 +334,7 @@ export default function AdminReports() {
       const tb = typeof b.date === 'number' ? b.date : b.date?.toMillis?.() || 0;
       return tb - ta;
     })
-    .slice(0, 6);
+    .slice(0, 3);
 
 
   return (
@@ -402,31 +411,21 @@ export default function AdminReports() {
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={timeSeries} margin={{ top: 6, right: 8, left: 6, bottom: 6 }}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="date" interval={Math.max(0, Math.floor(timeSeries.length / 6))} tick={{ fontSize: 11 }} tickFormatter={(v) => {
-                              try {
-                                const d = new Date(v);
-                                return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-                              } catch (e) {
-                                return String(v);
-                              }
-                            }} />
+                            <XAxis
+                              dataKey="label"
+                              interval={Math.max(0, Math.floor(timeSeries.length / 6))}
+                              tick={{ fontSize: 11 }}
+                            />
                             <YAxis />
-                            <Tooltip labelFormatter={(label) => {
-                              // label is the short date; try to produce a full friendly date when possible
-                              try {
-                                const parts = String(label).split('/');
-                                if (parts.length === 2) {
-                                  const day = parseInt(parts[0], 10);
-                                  const month = parseInt(parts[1], 10) - 1;
-                                  const year = new Date().getFullYear();
-                                  return new Date(year, month, day).toLocaleString();
-                                }
-                                const d = new Date(String(label));
-                                return d.toLocaleString();
-                              } catch (e) {
-                                return String(label);
-                              }
-                            }} />
+                            <Tooltip
+                              labelFormatter={(_, payload) => {
+                                const p = payload && payload[0];
+                                const iso = (p && p.payload && p.payload.date) || undefined;
+                                if (!iso) return '';
+                                const d = new Date(iso);
+                                return d.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+                              }}
+                            />
                             <Legend />
                             <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
                           </LineChart>
