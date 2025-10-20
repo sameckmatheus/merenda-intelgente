@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { menuItems } from "@/components/admin/sidebar";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const schools = [
   "ANEXO MARCOS FREIRE",
@@ -136,13 +137,21 @@ export default function AdminReports() {
     };
 
     fetchData();
-  }, [date, filterType, selectedSchool]);
+  }, [date, filterType, selectedSchool, selectedStatusFilter, helpNeededFilter]);
 
   const [bySchool, setBySchool] = useState<{ name: string; count: number }[]>([]);
   const [byStatus, setByStatus] = useState<{ name: string; value: number }[]>([]);
 
   const dataPerSchool = bySchool;
-  const statusData = byStatus;
+  const statusData = useMemo(() => {
+    const base = { pendente: 0, confirmado: 0, cancelado: 0 } as Record<string, number>;
+    byStatus.forEach(s => { base[s.name] = s.value || 0; });
+    return [
+      { name: 'pendente', value: base.pendente },
+      { name: 'confirmado', value: base.confirmado },
+      { name: 'cancelado', value: base.cancelado },
+    ];
+  }, [byStatus]);
 
   // Raw submissions for time series and recent activity
   const [submissionsRaw, setSubmissionsRaw] = useState<any[]>([]);
@@ -280,7 +289,7 @@ export default function AdminReports() {
       }
     };
     fetchRaw();
-  }, [date, filterType, selectedSchool]);
+  }, [date, filterType, selectedSchool, selectedStatusFilter, helpNeededFilter]);
 
   // recompute percentages for pie legend
   const statusWithPercent = useMemo(() => {
