@@ -50,7 +50,7 @@ export function AdminLayout({
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen w-full bg-slate-50">
+    <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 via-white to-blue-50">
       <AdminSidebar
         date={date}
         setDate={setDate}
@@ -67,7 +67,7 @@ export function AdminLayout({
       />
 
       <div className="md:pl-72">
-        <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-sm">
+        <header className="sticky top-0 z-10 border-b border-blue-100 bg-white/80 backdrop-blur-md">
           <div className="flex h-16 items-center justify-between px-4">
             <div className="flex items-center gap-2">
               <Sheet>

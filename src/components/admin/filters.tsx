@@ -4,24 +4,25 @@ import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from 'date-fns/locale';
 import { Building, Calendar as CalendarIcon, MessageSquare, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FiltersProps {
-  date: Date | undefined;
-  setDate: (date: Date | undefined) => void;
-  filterType: 'day' | 'week' | 'month';
-  setFilterType: (type: 'day' | 'week' | 'month') => void;
-  selectedSchool: string;
-  setSelectedSchool: (school: string) => void;
-  selectedStatus: string;
-  setSelectedStatus: (status: string) => void;
-  helpNeededFilter: 'all' | 'yes' | 'no';
-  setHelpNeededFilter: (filter: 'all' | 'yes' | 'no') => void;
-  schools: string[];
-  statusTranslations: { [key: string]: string };
+  date?: Date | undefined;
+  setDate?: (date: Date | undefined) => void;
+  filterType?: 'day' | 'week' | 'month';
+  setFilterType?: (type: 'day' | 'week' | 'month') => void;
+  selectedSchool?: string;
+  setSelectedSchool?: (school: string) => void;
+  selectedStatus?: string;
+  setSelectedStatus?: (status: string) => void;
+  helpNeededFilter?: 'all' | 'yes' | 'no';
+  setHelpNeededFilter?: (filter: 'all' | 'yes' | 'no') => void;
+  schools?: string[];
+  statusTranslations?: { [key: string]: string };
 }
 
 export function Filters({
@@ -38,6 +39,14 @@ export function Filters({
   schools,
   statusTranslations,
 }: FiltersProps) {
+  // Safe handlers
+  const safeSetDate = setDate || (() => { });
+  const safeSetFilterType = setFilterType || (() => { });
+  const safeSetSelectedSchool = setSelectedSchool || (() => { });
+  const safeSetSelectedStatus = setSelectedStatus || (() => { });
+  const safeSetHelpNeededFilter = setHelpNeededFilter || (() => { });
+  const safeSchools = schools || [];
+  const safeStatusTranslations = statusTranslations || {};
   const getPeriodLabel = () => {
     if (!date) return "Selecione uma data";
     switch (filterType) {
@@ -55,15 +64,15 @@ export function Filters({
   return (
     <div className="space-y-4 bg-card rounded-lg border p-4">
       <h3 className="font-semibold">Filtros</h3>
-      
+
       <div className="space-y-4">
         <div className="space-y-2">
           <label className="text-sm font-medium">Período</label>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 rounded-md border bg-card p-1">
-              <Button variant={filterType === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterType('day')}>Dia</Button>
-              <Button variant={filterType === 'week' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterType('week')}>Semana</Button>
-              <Button variant={filterType === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => setFilterType('month')}>Mês</Button>
+              <Button variant={filterType === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => safeSetFilterType('day')}>Dia</Button>
+              <Button variant={filterType === 'week' ? 'secondary' : 'ghost'} size="sm" onClick={() => safeSetFilterType('week')}>Semana</Button>
+              <Button variant={filterType === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => safeSetFilterType('month')}>Mês</Button>
             </div>
             <Popover>
               <PopoverTrigger asChild>
@@ -73,7 +82,7 @@ export function Filters({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+                <Calendar mode="single" selected={date} onSelect={safeSetDate} initialFocus />
               </PopoverContent>
             </Popover>
           </div>
@@ -81,43 +90,37 @@ export function Filters({
 
         <div className="space-y-2">
           <label className="text-sm font-medium">Escola</label>
-          <Select value={selectedSchool} onValueChange={setSelectedSchool}>
-            <SelectTrigger>
-              <div className="flex items-center gap-2">
-                <Building className="h-4 w-4" />
-                <SelectValue placeholder="Filtrar por escola" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as Escolas</SelectItem>
-              {schools.map((school) => (
-                <SelectItem key={school} value={school}>{school}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Combobox
+            options={[
+              { value: "all", label: "Todas as Escolas" },
+              ...safeSchools.map(s => ({ value: s, label: s }))
+            ]}
+            value={selectedSchool}
+            onChange={safeSetSelectedSchool}
+            placeholder="Selecione a escola..."
+            searchPlaceholder="Procurar escola..."
+            modalTitle="Selecione a Escola"
+          />
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium">Status</label>
-          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-            <SelectTrigger>
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
-                <SelectValue placeholder="Filtrar por status" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os Status</SelectItem>
-              {Object.entries(statusTranslations).map(([value, label]) => (
-                <SelectItem key={value} value={value}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Combobox
+            options={[
+              { value: "all", label: "Todos os Status" },
+              ...Object.entries(safeStatusTranslations).map(([k, v]) => ({ value: k, label: v }))
+            ]}
+            value={selectedStatus}
+            onChange={safeSetSelectedStatus}
+            placeholder="Selecione o status..."
+            searchPlaceholder="Procurar status..."
+            modalTitle="Selecione o Status"
+          />
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium">Pedido de Ajuda</label>
-          <Select value={helpNeededFilter} onValueChange={(value: 'all' | 'yes' | 'no') => setHelpNeededFilter(value)}>
+          <Select value={helpNeededFilter} onValueChange={(value: 'all' | 'yes' | 'no') => safeSetHelpNeededFilter(value)}>
             <SelectTrigger>
               <div className="flex items-center gap-2">
                 <HelpCircle className="h-4 w-4" />

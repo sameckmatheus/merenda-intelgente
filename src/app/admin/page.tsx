@@ -20,6 +20,7 @@ import { Separator } from "@/components/ui/separator";
 
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { SubmissionDetails } from "@/components/admin/submission-details";
+import { Combobox } from "@/components/ui/combobox";
 
 import { Filter, Submission, menuTypeTranslations, statusTranslations } from "@/lib/types";
 import { db } from "@/lib/firebase";
@@ -279,34 +280,34 @@ export default function AdminDashboard() {
       >
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
+            <Card className="rounded-2xl shadow-xl shadow-blue-900/5 border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total de Registros</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-slate-600">Total de Registros</CardTitle>
+                <Users className="h-4 w-4 text-blue-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{filteredSubmissions.length}</div>
-                <p className="text-xs text-muted-foreground">no período selecionado</p>
+                <div className="text-3xl font-bold text-slate-900">{filteredSubmissions.length}</div>
+                <p className="text-xs text-slate-500 font-medium mt-1">no período selecionado</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="rounded-2xl shadow-xl shadow-blue-900/5 border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pedidos de Ajuda</CardTitle>
-                <HelpCircle className="h-4 w-4 text-muted-foreground text-amber-600" />
+                <CardTitle className="text-sm font-medium text-slate-600">Pedidos de Ajuda</CardTitle>
+                <HelpCircle className="h-4 w-4 text-amber-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{filteredSubmissions.filter(s => s.helpNeeded).length}</div>
-                <p className="text-xs text-muted-foreground">solicitações de itens em falta</p>
+                <div className="text-3xl font-bold text-slate-900">{filteredSubmissions.filter(s => s.helpNeeded).length}</div>
+                <p className="text-xs text-slate-500 font-medium mt-1">solicitações de itens em falta</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="rounded-2xl shadow-xl shadow-blue-900/5 border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Compras Realizadas</CardTitle>
-                <ShoppingBasket className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-slate-600">Compras Realizadas</CardTitle>
+                <ShoppingBasket className="h-4 w-4 text-emerald-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{filteredSubmissions.filter(s => s.itemsPurchased).length}</div>
-                <p className="text-xs text-muted-foreground">compras emergenciais registradas</p>
+                <div className="text-3xl font-bold text-slate-900">{filteredSubmissions.filter(s => s.itemsPurchased).length}</div>
+                <p className="text-xs text-slate-500 font-medium mt-1">compras emergenciais registradas</p>
               </CardContent>
             </Card>
           </div>
@@ -322,20 +323,20 @@ export default function AdminDashboard() {
               <p>Nenhum registro encontrado para os filtros selecionados.</p>
             </div>
           ) : (
-            <Card>
+            <Card className="rounded-2xl shadow-xl shadow-blue-900/5 border-0 overflow-hidden bg-white/90 backdrop-blur-md">
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Escola</TableHead>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Turno</TableHead>
-                        <TableHead>Responsável</TableHead>
-                        <TableHead>Cardápio</TableHead>
-                        <TableHead>Alunos</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
+                    <TableHeader className="bg-slate-50/50">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="font-semibold text-slate-600">Escola</TableHead>
+                        <TableHead className="font-semibold text-slate-600">Data</TableHead>
+                        <TableHead className="font-semibold text-slate-600">Turno</TableHead>
+                        <TableHead className="font-semibold text-slate-600">Responsável</TableHead>
+                        <TableHead className="font-semibold text-slate-600">Cardápio</TableHead>
+                        <TableHead className="font-semibold text-slate-600">Alunos</TableHead>
+                        <TableHead className="font-semibold text-slate-600">Status</TableHead>
+                        <TableHead className="text-right font-semibold text-slate-600">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -344,8 +345,8 @@ export default function AdminDashboard() {
                           key={sub.id}
                           onClick={() => setSelectedSubmission(sub)}
                           className={cn(
-                            "cursor-pointer",
-                            sub.helpNeeded && "bg-red-50 hover:bg-red-100"
+                            "cursor-pointer transition-colors hover:bg-blue-50/50",
+                            sub.helpNeeded && "bg-red-50 hover:bg-red-100/80"
                           )}
                         >
                           <TableCell className="font-medium">{sub.school}</TableCell>

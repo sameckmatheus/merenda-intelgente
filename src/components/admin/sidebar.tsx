@@ -51,18 +51,18 @@ export const menuItems = [
 import { Filters } from "@/components/admin/filters";
 
 interface AdminSidebarProps {
-  date: Date | undefined;
-  setDate: (date: Date | undefined) => void;
-  filterType: 'day' | 'week' | 'month';
-  setFilterType: (type: 'day' | 'week' | 'month') => void;
-  selectedSchool: string;
-  setSelectedSchool: (school: string) => void;
-  selectedStatus: string;
-  setSelectedStatus: (status: string) => void;
-  helpNeededFilter: 'all' | 'yes' | 'no';
-  setHelpNeededFilter: (filter: 'all' | 'yes' | 'no') => void;
-  schools: string[];
-  statusTranslations: { [key: string]: string };
+  date?: Date | undefined;
+  setDate?: (date: Date | undefined) => void;
+  filterType?: 'day' | 'week' | 'month';
+  setFilterType?: (type: 'day' | 'week' | 'month') => void;
+  selectedSchool?: string;
+  setSelectedSchool?: (school: string) => void;
+  selectedStatus?: string;
+  setSelectedStatus?: (status: string) => void;
+  helpNeededFilter?: 'all' | 'yes' | 'no';
+  setHelpNeededFilter?: (filter: 'all' | 'yes' | 'no') => void;
+  schools?: string[];
+  statusTranslations?: { [key: string]: string };
 }
 
 export function AdminSidebar(props: AdminSidebarProps) {
@@ -73,7 +73,7 @@ export function AdminSidebar(props: AdminSidebarProps) {
       <div className="h-16 flex items-center border-b w-full">
         <h2 className="font-semibold tracking-tight">MenuPlanner</h2>
       </div>
-  <nav className="space-y-2 py-4">
+      <nav className="space-y-2 py-4">
         {menuItems.map((item) => {
           const isActive = pathname === item.href;
           return (
