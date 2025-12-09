@@ -22,7 +22,7 @@ import { AdminLayout } from "@/components/admin/admin-layout";
 import { SubmissionDetails } from "@/components/admin/submission-details";
 
 import { Filter, Submission, menuTypeTranslations, statusTranslations } from "@/lib/types";
-import { db } from "@/lib/firebase"; 
+import { db } from "@/lib/firebase";
 import { cn } from "@/lib/utils";
 
 const MENU_TYPE_STYLES = {
@@ -38,7 +38,7 @@ const schools = [
   "DILMA",
   "FRANCELINA",
   "GERCINA ALVES",
-  "JOÃO BENTO", 
+  "JOÃO BENTO",
   "MARCOS FREIRE",
   "MARIA JOSÉ",
   "MARIA OLIVEIRA",
@@ -181,16 +181,16 @@ export default function AdminDashboard() {
     }
   };
 
-  const DetailItem = ({ 
-    icon, 
-    label, 
-    value, 
-    fullWidth = false 
-  }: { 
-    icon: React.ReactNode, 
-    label: string, 
-    value?: string | number | boolean | null, 
-    fullWidth?: boolean 
+  const DetailItem = ({
+    icon,
+    label,
+    value,
+    fullWidth = false
+  }: {
+    icon: React.ReactNode,
+    label: string,
+    value?: string | number | boolean | null,
+    fullWidth?: boolean
   }) => {
     if (value === null || value === undefined || value === '' || value === false) return null;
     return (
@@ -214,11 +214,48 @@ export default function AdminDashboard() {
     return format(new Date(date), "dd/MM/yy");
   };
 
-  const logoutAction = (
-    <Button variant="outline" onClick={handleLogout}>
-      <LogOut className="w-4 h-4 mr-2" />
-      Sair
-    </Button>
+  const handleExport = () => {
+    let startDate: Date | null = null;
+    let endDate: Date | null = null;
+
+    if (date) {
+      if (filterType === 'day') {
+        startDate = new Date(date);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(date);
+        endDate.setHours(23, 59, 59, 999);
+      } else if (filterType === 'week') {
+        startDate = startOfWeek(date, { locale: ptBR });
+        endDate = endOfWeek(date, { locale: ptBR });
+      } else {
+        startDate = startOfMonth(date);
+        endDate = endOfMonth(date);
+      }
+    }
+
+    const params = new URLSearchParams();
+    if (startDate && endDate) {
+      params.set('start', String(startDate.getTime()));
+      params.set('end', String(endDate.getTime()));
+    }
+    if (selectedSchool) params.set('school', selectedSchool);
+    if (selectedStatus && selectedStatus !== 'all') params.set('status', selectedStatus);
+    if (helpNeededFilter && helpNeededFilter !== 'all') params.set('helpNeeded', helpNeededFilter);
+
+    window.open(`/api/reports/csv?${params.toString()}`, '_blank');
+  };
+
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      <Button variant="outline" onClick={handleExport}>
+        <FileDown className="w-4 h-4 mr-2" />
+        Exportar
+      </Button>
+      <Button variant="outline" onClick={handleLogout}>
+        <LogOut className="w-4 h-4 mr-2" />
+        Sair
+      </Button>
+    </div>
   );
 
   return (
@@ -226,7 +263,7 @@ export default function AdminDashboard() {
       <AdminLayout
         title="Dashboard de Acompanhamento"
         description="Visualize os registros de merenda e gere relatórios"
-        actions={logoutAction}
+        actions={headerActions}
         date={date}
         setDate={setDate}
         filterType={filterType}
@@ -240,131 +277,131 @@ export default function AdminDashboard() {
         schools={schools}
         statusTranslations={statusTranslations}
       >
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total de Registros</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{filteredSubmissions.length}</div>
-                  <p className="text-xs text-muted-foreground">no período selecionado</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pedidos de Ajuda</CardTitle>
-                  <HelpCircle className="h-4 w-4 text-muted-foreground text-amber-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{filteredSubmissions.filter(s => s.helpNeeded).length}</div>
-                  <p className="text-xs text-muted-foreground">solicitações de itens em falta</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Compras Realizadas</CardTitle>
-                  <ShoppingBasket className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{filteredSubmissions.filter(s => s.itemsPurchased).length}</div>
-                  <p className="text-xs text-muted-foreground">compras emergenciais registradas</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {isLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <LoaderCircle className="animate-spin text-primary" size={48} />
-              </div>
-            ) : filteredSubmissions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-card text-muted-foreground/60">
-                <FileX2 className="w-16 h-16 mb-4" />
-                <h3 className="text-xl font-semibold">Nenhum dado registrado</h3>
-                <p>Nenhum registro encontrado para os filtros selecionados.</p>
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Escola</TableHead>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Turno</TableHead>
-                          <TableHead>Responsável</TableHead>
-                          <TableHead>Cardápio</TableHead>
-                          <TableHead>Alunos</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredSubmissions.map((sub) => (
-                          <TableRow 
-                            key={sub.id} 
-                            onClick={() => setSelectedSubmission(sub)} 
-                            className={cn(
-                              "cursor-pointer",
-                              sub.helpNeeded && "bg-red-50 hover:bg-red-100"
-                            )}
-                          >
-                            <TableCell className="font-medium">{sub.school}</TableCell>
-                            <TableCell>{format(sub.date instanceof Timestamp ? sub.date.toDate() : new Date(sub.date), "dd/MM/yy")}</TableCell>
-                            <TableCell>{sub.shift}</TableCell>
-                            <TableCell>{sub.respondentName}</TableCell>
-                            <TableCell><div className={`px-2 py-1 text-xs rounded-full text-center border ${getMenuTypeStyle(sub.menuType)}`}>{menuTypeTranslations[sub.menuType]}</div></TableCell>
-                            <TableCell>{sub.presentStudents}/{sub.totalStudents}</TableCell>
-                            <TableCell onClick={(e) => e.stopPropagation()}>
-                              <Select
-                                value={(sub.status ?? 'pendente')}
-                                onValueChange={(value) => handleChangeStatus(sub.id, value as NonNullable<Submission['status']>)}
-                                disabled={updatingStatusId === sub.id}
-                              >
-                                <SelectTrigger className="w-[220px]">
-                                  <SelectValue placeholder="Selecione o status">
-                                    {statusTranslations[(sub.status ?? 'pendente') as NonNullable<Submission['status']>]}
-                                  </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {Object.entries(statusTranslations).map(([value, label]) => (
-                                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <Button variant="ghost" size="icon" disabled={isDeleting}>
-                                    <Trash2 className="text-destructive/70" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                                    <AlertDialogDescription>Essa ação não pode ser desfeita. Isso excluirá permanentemente o registro.</AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDelete(sub.id)} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                                      {isDeleting ? <LoaderCircle className="animate-spin" /> : "Excluir"}
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total de Registros</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{filteredSubmissions.length}</div>
+                <p className="text-xs text-muted-foreground">no período selecionado</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pedidos de Ajuda</CardTitle>
+                <HelpCircle className="h-4 w-4 text-muted-foreground text-amber-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{filteredSubmissions.filter(s => s.helpNeeded).length}</div>
+                <p className="text-xs text-muted-foreground">solicitações de itens em falta</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Compras Realizadas</CardTitle>
+                <ShoppingBasket className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{filteredSubmissions.filter(s => s.itemsPurchased).length}</div>
+                <p className="text-xs text-muted-foreground">compras emergenciais registradas</p>
+              </CardContent>
+            </Card>
           </div>
+
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <LoaderCircle className="animate-spin text-primary" size={48} />
+            </div>
+          ) : filteredSubmissions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-card text-muted-foreground/60">
+              <FileX2 className="w-16 h-16 mb-4" />
+              <h3 className="text-xl font-semibold">Nenhum dado registrado</h3>
+              <p>Nenhum registro encontrado para os filtros selecionados.</p>
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Escola</TableHead>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Turno</TableHead>
+                        <TableHead>Responsável</TableHead>
+                        <TableHead>Cardápio</TableHead>
+                        <TableHead>Alunos</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredSubmissions.map((sub) => (
+                        <TableRow
+                          key={sub.id}
+                          onClick={() => setSelectedSubmission(sub)}
+                          className={cn(
+                            "cursor-pointer",
+                            sub.helpNeeded && "bg-red-50 hover:bg-red-100"
+                          )}
+                        >
+                          <TableCell className="font-medium">{sub.school}</TableCell>
+                          <TableCell>{format(sub.date instanceof Timestamp ? sub.date.toDate() : new Date(sub.date), "dd/MM/yy")}</TableCell>
+                          <TableCell>{sub.shift}</TableCell>
+                          <TableCell>{sub.respondentName}</TableCell>
+                          <TableCell><div className={`px-2 py-1 text-xs rounded-full text-center border ${getMenuTypeStyle(sub.menuType)}`}>{menuTypeTranslations[sub.menuType]}</div></TableCell>
+                          <TableCell>{sub.presentStudents}/{sub.totalStudents}</TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <Select
+                              value={(sub.status ?? 'pendente')}
+                              onValueChange={(value) => handleChangeStatus(sub.id, value as NonNullable<Submission['status']>)}
+                              disabled={updatingStatusId === sub.id}
+                            >
+                              <SelectTrigger className="w-[220px]">
+                                <SelectValue placeholder="Selecione o status">
+                                  {statusTranslations[(sub.status ?? 'pendente') as NonNullable<Submission['status']>]}
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(statusTranslations).map(([value, label]) => (
+                                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                <Button variant="ghost" size="icon" disabled={isDeleting}>
+                                  <Trash2 className="text-destructive/70" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                  <AlertDialogDescription>Essa ação não pode ser desfeita. Isso excluirá permanentemente o registro.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(sub.id)} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                                    {isDeleting ? <LoaderCircle className="animate-spin" /> : "Excluir"}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </AdminLayout>
 
       {selectedSubmission && (
@@ -387,23 +424,23 @@ export default function AdminDashboard() {
             <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
               <Card className="bg-slate-50/50">
                 <CardContent className="p-4 grid grid-cols-2 gap-4">
-                  <DetailItem 
-                    icon={<Users />} 
-                    label="Alunos" 
-                    value={`${selectedSubmission.presentStudents} presentes de ${selectedSubmission.totalStudents}`} 
+                  <DetailItem
+                    icon={<Users />}
+                    label="Alunos"
+                    value={`${selectedSubmission.presentStudents} presentes de ${selectedSubmission.totalStudents}`}
                   />
-                  <DetailItem 
-                    icon={<Utensils />} 
-                    label="Cardápio Servido" 
-                    value={menuTypeTranslations[selectedSubmission.menuType]} 
+                  <DetailItem
+                    icon={<Utensils />}
+                    label="Cardápio Servido"
+                    value={menuTypeTranslations[selectedSubmission.menuType]}
                   />
                 </CardContent>
               </Card>
 
-              <DetailItem 
-                icon={<MessageSquare />} 
-                label="Detalhe Cardápio Alternativo" 
-                value={selectedSubmission.alternativeMenuDescription} 
+              <DetailItem
+                icon={<MessageSquare />}
+                label="Detalhe Cardápio Alternativo"
+                value={selectedSubmission.alternativeMenuDescription}
                 fullWidth
               />
 
@@ -413,26 +450,26 @@ export default function AdminDashboard() {
                 <h3 className="font-bold text-amber-900 flex items-center gap-2">
                   <HelpCircle /> Seção de Ajuda
                 </h3>
-                <DetailItem 
-                  icon={<HelpCircle className="text-amber-700"/>} 
-                  label="Pedido de Ajuda" 
-                  value={selectedSubmission.helpNeeded} 
+                <DetailItem
+                  icon={<HelpCircle className="text-amber-700" />}
+                  label="Pedido de Ajuda"
+                  value={selectedSubmission.helpNeeded}
                 />
-                <DetailItem 
-                  icon={<MessageSquare />} 
-                  label="Itens em Falta" 
-                  value={selectedSubmission.missingItems} 
-                  fullWidth 
+                <DetailItem
+                  icon={<MessageSquare />}
+                  label="Itens em Falta"
+                  value={selectedSubmission.missingItems}
+                  fullWidth
                 />
-                <DetailItem 
-                  icon={<ShoppingBasket />} 
-                  label="Pode Comprar os Itens?" 
-                  value={selectedSubmission.canBuyMissingItems} 
+                <DetailItem
+                  icon={<ShoppingBasket />}
+                  label="Pode Comprar os Itens?"
+                  value={selectedSubmission.canBuyMissingItems}
                 />
-                <DetailItem 
-                  icon={<ShoppingBasket />} 
-                  label="Itens Comprados" 
-                  value={selectedSubmission.itemsPurchased} 
+                <DetailItem
+                  icon={<ShoppingBasket />}
+                  label="Itens Comprados"
+                  value={selectedSubmission.itemsPurchased}
                   fullWidth
                 />
               </div>
@@ -443,26 +480,26 @@ export default function AdminDashboard() {
                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
                   <PackageCheck /> Seção de Suprimentos
                 </h3>
-                <DetailItem 
-                  icon={<PackageCheck />} 
-                  label="Recebeu Suprimentos?" 
-                  value={selectedSubmission.suppliesReceived} 
+                <DetailItem
+                  icon={<PackageCheck />}
+                  label="Recebeu Suprimentos?"
+                  value={selectedSubmission.suppliesReceived}
                 />
-                <DetailItem 
-                  icon={<MessageSquare />} 
-                  label="Suprimentos Recebidos" 
-                  value={selectedSubmission.suppliesDescription} 
-                  fullWidth 
+                <DetailItem
+                  icon={<MessageSquare />}
+                  label="Suprimentos Recebidos"
+                  value={selectedSubmission.suppliesDescription}
+                  fullWidth
                 />
               </div>
 
               <Separator />
 
-              <DetailItem 
-                icon={<MessageSquare />} 
-                label="Observações Gerais" 
-                value={selectedSubmission.observations} 
-                fullWidth 
+              <DetailItem
+                icon={<MessageSquare />}
+                label="Observações Gerais"
+                value={selectedSubmission.observations}
+                fullWidth
               />
             </div>
           </DialogContent>

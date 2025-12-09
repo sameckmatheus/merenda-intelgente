@@ -110,17 +110,18 @@ export default function LoginForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-2">
-                <KeyRound />
-                E-mail
-              </FormLabel>
-              <FormControl>
-                <Input
-                  type="email"
-                  placeholder="admin@email.com"
-                  {...field}
-                />
-              </FormControl>
+              <FormLabel className="sr-only">E-mail</FormLabel>
+              <div className="relative">
+                <FormControl>
+                  <Input
+                    className="pl-10 h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:ring-blue-500 transition-all hover:bg-white"
+                    {...field}
+                  />
+                </FormControl>
+                <div className="absolute left-3 top-3.5 text-slate-400 pointer-events-none">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+              </div>
               <FormMessage />
             </FormItem>
           )}
@@ -130,28 +131,29 @@ export default function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-2">
-                <Lock />
-                Senha
-              </FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder="********"
-                  {...field}
-                />
-              </FormControl>
+              <FormLabel className="sr-only">Senha</FormLabel>
+              <div className="relative">
+                <FormControl>
+                  <Input
+                    className="pl-10 h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:ring-blue-500 transition-all hover:bg-white"
+                    {...field}
+                  />
+                </FormControl>
+                <div className="absolute left-3 top-3.5 text-slate-400 pointer-events-none">
+                  <Lock className="w-5 h-5" />
+                </div>
+              </div>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button type="submit" className="w-full h-12 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/20 text-md font-medium transition-all hover:scale-[1.02] active:scale-[0.98]" disabled={isLoading}>
           {isLoading ? (
-            <LoaderCircle className="animate-spin" />
+            <LoaderCircle className="animate-spin mr-2" />
           ) : (
             <>
-              <LogIn className="mr-2" />
-              Entrar
+              <LogIn className="mr-2 w-5 h-5" />
+              Entrar na Plataforma
             </>
           )}
         </Button>
