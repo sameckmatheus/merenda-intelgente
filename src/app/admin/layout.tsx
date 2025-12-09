@@ -1,0 +1,31 @@
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { getAuth } from "firebase-admin/auth";
+import { initAdmin } from "@/lib/firebase-admin";
+import { AUTH_COOKIE_NAME } from "@/lib/constants";
+
+// Initialize Firebase Admin
+initAdmin();
+
+export default async function AdminLayout({
+    children,
+}: {
+    children: React.ReactNode;
+}) {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get(AUTH_COOKIE_NAME);
+
+    if (!sessionCookie) {
+        redirect("/admin/login");
+    }
+
+    try {
+        // Verify the session cookie
+        await getAuth().verifySessionCookie(sessionCookie.value, true);
+    } catch (error) {
+        console.error("Auth verification failed in layout:", error);
+        redirect("/admin/login");
+    }
+
+    return <>{children}</>;
+}
