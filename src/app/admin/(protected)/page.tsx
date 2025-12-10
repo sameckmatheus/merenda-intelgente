@@ -249,11 +249,12 @@ export default function AdminDashboard() {
 
   const headerActions = (
     <div className="flex items-center gap-2">
-      <Button variant="outline" onClick={handleExport}>
-        <FileDown className="w-4 h-4 mr-2" />
-        Exportar
-      </Button>
-      <Button variant="outline" onClick={handleLogout}>
+      <Button
+        onClick={handleLogout}
+        variant="default"
+        size="sm"
+        className="bg-gradient-to-r from-red-600 to-red-600 hover:from-red-700 hover:to-magenta-700 text-white shadow-lg shadow-red-600/20 rounded-xl transition-all hover:scale-105 active:scale-95"
+      >
         <LogOut className="w-4 h-4 mr-2" />
         Sair
       </Button>
@@ -287,7 +288,9 @@ export default function AdminDashboard() {
             <Card className="rounded-2xl shadow-xl shadow-blue-900/5 border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-slate-600">Total de Registros</CardTitle>
-                <Users className="h-4 w-4 text-blue-600" />
+                <div className="p-3 rounded-xl bg-blue-600">
+                  <Users className="h-4 w-4 text-white" />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-slate-900">{filteredSubmissions.length}</div>
@@ -297,7 +300,9 @@ export default function AdminDashboard() {
             <Card className="rounded-2xl shadow-xl shadow-blue-900/5 border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-slate-600">Pedidos de Ajuda</CardTitle>
-                <HelpCircle className="h-4 w-4 text-amber-500" />
+                <div className="p-3 rounded-xl bg-amber-500">
+                  <HelpCircle className="h-4 w-4 text-white" />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-slate-900">{filteredSubmissions.filter(s => s.helpNeeded).length}</div>
@@ -307,7 +312,9 @@ export default function AdminDashboard() {
             <Card className="rounded-2xl shadow-xl shadow-blue-900/5 border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-slate-600">Compras Realizadas</CardTitle>
-                <ShoppingBasket className="h-4 w-4 text-emerald-600" />
+                <div className="p-3 rounded-xl bg-emerald-600">
+                  <ShoppingBasket className="h-4 w-4 text-white" />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-slate-900">{filteredSubmissions.filter(s => s.itemsPurchased).length}</div>
