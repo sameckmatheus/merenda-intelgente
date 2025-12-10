@@ -62,22 +62,20 @@ export function Filters({
   };
 
   return (
-    <div className="space-y-4 bg-card rounded-lg border p-4">
-      <h3 className="font-semibold">Filtros</h3>
-
-      <div className="space-y-4">
+    <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-blue-100 shadow-lg shadow-blue-900/5 p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="space-y-2">
-          <label className="text-sm font-medium">Período</label>
+          <label className="text-sm font-medium text-slate-700">Período</label>
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 rounded-md border bg-card p-1">
-              <Button variant={filterType === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => safeSetFilterType('day')}>Dia</Button>
-              <Button variant={filterType === 'week' ? 'secondary' : 'ghost'} size="sm" onClick={() => safeSetFilterType('week')}>Semana</Button>
-              <Button variant={filterType === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => safeSetFilterType('month')}>Mês</Button>
+            <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-lg">
+              <Button variant={filterType === 'day' ? 'secondary' : 'ghost'} size="sm" className={cn("flex-1 rounded-md text-xs", filterType === 'day' && "shadow-sm text-blue-600 font-semibold bg-white")} onClick={() => safeSetFilterType('day')}>Dia</Button>
+              <Button variant={filterType === 'week' ? 'secondary' : 'ghost'} size="sm" className={cn("flex-1 rounded-md text-xs", filterType === 'week' && "shadow-sm text-blue-600 font-semibold bg-white")} onClick={() => safeSetFilterType('week')}>Semana</Button>
+              <Button variant={filterType === 'month' ? 'secondary' : 'ghost'} size="sm" className={cn("flex-1 rounded-md text-xs", filterType === 'month' && "shadow-sm text-blue-600 font-semibold bg-white")} onClick={() => safeSetFilterType('month')}>Mês</Button>
             </div>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
-                  <CalendarIcon className="mr-2 h-4 w-4" />
+                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal bg-white border-slate-200", !date && "text-slate-500")}>
+                  <CalendarIcon className="mr-2 h-4 w-4 text-blue-500" />
                   <span>{getPeriodLabel()}</span>
                 </Button>
               </PopoverTrigger>
@@ -89,7 +87,7 @@ export function Filters({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Escola</label>
+          <label className="text-sm font-medium text-slate-700">Escola</label>
           <Combobox
             options={[
               { value: "all", label: "Todas as Escolas" },
@@ -104,7 +102,7 @@ export function Filters({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Status</label>
+          <label className="text-sm font-medium text-slate-700">Status</label>
           <Combobox
             options={[
               { value: "all", label: "Todos os Status" },
@@ -119,11 +117,11 @@ export function Filters({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Pedido de Ajuda</label>
+          <label className="text-sm font-medium text-slate-700">Pedido de Ajuda</label>
           <Select value={helpNeededFilter} onValueChange={(value: 'all' | 'yes' | 'no') => safeSetHelpNeededFilter(value)}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-white border-slate-200">
               <div className="flex items-center gap-2">
-                <HelpCircle className="h-4 w-4" />
+                <HelpCircle className="h-4 w-4 text-amber-500" />
                 <SelectValue placeholder="Filtrar pedidos de ajuda" />
               </div>
             </SelectTrigger>

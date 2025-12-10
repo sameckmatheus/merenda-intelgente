@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { AdminSidebar } from "@/components/admin/sidebar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { menuItems } from "@/components/admin/sidebar";
+import { cn } from "@/lib/utils";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -34,104 +34,87 @@ export function AdminLayout({
   title,
   description,
   actions,
-  date,
-  setDate,
-  filterType,
-  setFilterType,
-  selectedSchool,
-  setSelectedSchool,
-  selectedStatus,
-  setSelectedStatus,
-  helpNeededFilter,
-  setHelpNeededFilter,
-  schools = [],
-  statusTranslations = {}
-}: AdminLayoutProps) {
+}: Omit<AdminLayoutProps, "date" | "setDate" | "filterType" | "setFilterType" | "selectedSchool" | "setSelectedSchool" | "selectedStatus" | "setSelectedStatus" | "helpNeededFilter" | "setHelpNeededFilter" | "schools" | "statusTranslations">) {
   const pathname = usePathname();
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 via-white to-blue-50">
-      <AdminSidebar
-        date={date}
-        setDate={setDate}
-        filterType={filterType}
-        setFilterType={setFilterType}
-        selectedSchool={selectedSchool}
-        setSelectedSchool={setSelectedSchool}
-        selectedStatus={selectedStatus}
-        setSelectedStatus={setSelectedStatus}
-        helpNeededFilter={helpNeededFilter}
-        setHelpNeededFilter={setHelpNeededFilter}
-        schools={schools}
-        statusTranslations={statusTranslations}
-      />
+      <header className="sticky top-0 z-50 w-full border-b border-blue-100 bg-white/80 backdrop-blur-md">
+        <div className="container mx-auto max-w-7xl px-4 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menu">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-0">
+                <SheetHeader className="px-4 py-3 border-b">
+                  <SheetTitle className="text-left flex items-center gap-2">
+                    <span className="font-bold text-blue-900">MenuPlanner</span>
+                  </SheetTitle>
+                </SheetHeader>
+                <nav className="space-y-2 p-4">
+                  {menuItems.map((item) => {
+                    const isActive = pathname === item.href;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-blue-50 hover:text-blue-900",
+                          isActive ? "bg-blue-50 text-blue-900 font-medium" : "text-slate-600"
+                        )}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {item.title}
+                      </Link>
+                    );
+                  })}
+                </nav>
+              </SheetContent>
+            </Sheet>
 
-      <div className="md:pl-72">
-        <header className="sticky top-0 z-10 border-b border-blue-100 bg-white/80 backdrop-blur-md">
-          <div className="flex h-16 items-center justify-between px-4">
-            <div className="flex items-center gap-2">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menu">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-72 p-0">
-                  <SheetHeader className="px-4 py-3 border-b">
-                    <SheetTitle>MenuPlanner</SheetTitle>
-                  </SheetHeader>
-                  <nav className="space-y-2 p-4">
-                    {menuItems.map((item: { title: string; icon: any; href: string }) => {
-                      const isActive = pathname === item.href;
-                      return (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className={`${isActive ? 'bg-accent' : 'transparent'} flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent`}
-                        >
-                          <item.icon className="h-4 w-4" />
-                          {item.title}
-                        </Link>
-                      );
-                    })}
-                  </nav>
-                  {(date || filterType || selectedSchool || selectedStatus || helpNeededFilter) && (
-                    <div className="px-4 pb-4">
-                      <AdminSidebar
-                        date={date}
-                        setDate={setDate}
-                        filterType={filterType}
-                        setFilterType={setFilterType}
-                        selectedSchool={selectedSchool}
-                        setSelectedSchool={setSelectedSchool}
-                        selectedStatus={selectedStatus}
-                        setSelectedStatus={setSelectedStatus}
-                        helpNeededFilter={helpNeededFilter}
-                        setHelpNeededFilter={setHelpNeededFilter}
-                        schools={schools}
-                        statusTranslations={statusTranslations}
-                      />
-                    </div>
-                  )}
-                </SheetContent>
-              </Sheet>
-              <div>
-                <h2 className="font-headline text-xl font-bold tracking-tight text-foreground">{title}</h2>
-                {description && <p className="text-muted-foreground">{description}</p>}
-              </div>
-            </div>
-            {actions && (
-              <div className="flex items-center gap-2">
-                {actions}
-              </div>
-            )}
+            <Link href="/admin" className="hidden md:flex items-center gap-2">
+              <span className="font-headline font-bold text-xl text-blue-950">MenuPlanner</span>
+            </Link>
+
+            <nav className="hidden md:flex items-center gap-1">
+              {menuItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all hover:bg-blue-50 hover:text-blue-900",
+                      isActive ? "bg-blue-100/50 text-blue-900" : "text-slate-600"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.title}
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
-        </header>
 
-        <main className="p-4 md:p-8">
-          {children}
-        </main>
-      </div>
+          <div className="flex items-center gap-4">
+            {actions}
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto max-w-7xl p-4 md:p-8 space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-blue-950">{title}</h2>
+            {description && <p className="text-slate-500 mt-1">{description}</p>}
+          </div>
+        </div>
+
+        {children}
+      </main>
     </div>
   );
 }
