@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getAuth } from 'firebase-admin/auth';
-import { initAdmin } from '@/lib/firebase-admin';
+import { initAdmin, isFirebaseAdminInitialized } from '@/lib/firebase-admin';
 import { AUTH_COOKIE_NAME } from '@/lib/constants';
 import { getFirestore, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 
@@ -12,6 +12,11 @@ async function requireAuth() {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get?.(AUTH_COOKIE_NAME) || cookieStore.get(AUTH_COOKIE_NAME as any);
   if (!sessionCookie) return null;
+
+  if (!isFirebaseAdminInitialized() && process.env.NODE_ENV === 'development') {
+    return { uid: 'dev-user' }; // Mock decoded token
+  }
+
   try {
     const decoded = await getAuth().verifySessionCookie((sessionCookie as any).value, true);
     return decoded;
@@ -33,6 +38,11 @@ export async function GET(request: Request) {
     const school = searchParams.get('school');
     const status = searchParams.get('status');
 
+    if (!isFirebaseAdminInitialized() && process.env.NODE_ENV === 'development') {
+      console.warn('⚠️ Returning empty submissions (Firebase Admin not initialized)');
+      return NextResponse.json({ submissions: [] }, { status: 200 });
+    }
+
     const db = getFirestore();
     const collectionRef = db.collection('submissions') as FirebaseFirestore.CollectionReference<FirebaseFirestore.DocumentData>;
     let q: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = collectionRef;
@@ -48,12 +58,12 @@ export async function GET(request: Request) {
     // index, run the date-range query and filter by school locally. If only school is
     // provided, query by school directly.
     let docs: FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>[] = [];
-    
+
     // Se temos filtro por escola e data, precisamos filtrar escola localmente
     if (school && school !== 'all' && start && end) {
       const snapshot = await q.get();
       docs = snapshot.docs.filter((d) => (d.data()?.school || '') === school);
-    } 
+    }
     // Se temos apenas escola, podemos filtrar direto no Firestore
     else if (school && school !== 'all') {
       const snapshot = await collectionRef.where('school', '==', school).get();

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getAuth } from 'firebase-admin/auth';
-import { initAdmin } from '@/lib/firebase-admin';
+import { initAdmin, isFirebaseAdminInitialized } from '@/lib/firebase-admin';
 import { AUTH_COOKIE_NAME } from '@/lib/constants';
 
 // Initialize the Firebase Admin SDK
@@ -20,9 +20,16 @@ export async function POST(request: Request) {
 
   try {
     const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
-    const sessionCookie = await getAuth().createSessionCookie(idToken, {
-      expiresIn,
-    });
+    let sessionCookie;
+
+    if (!isFirebaseAdminInitialized() && process.env.NODE_ENV === 'development') {
+      console.warn('⚠️ Firebase Admin not initialized. Bypassing auth for development.');
+      sessionCookie = 'DEV_TOKEN_BYPASS';
+    } else {
+      sessionCookie = await getAuth().createSessionCookie(idToken, {
+        expiresIn,
+      });
+    }
 
     const cookieStore = await cookies();
     cookieStore.set(AUTH_COOKIE_NAME, sessionCookie, {
