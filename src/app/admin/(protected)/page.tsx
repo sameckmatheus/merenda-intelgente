@@ -19,6 +19,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Separator } from "@/components/ui/separator";
 
 import { AdminLayout } from "@/components/admin/admin-layout";
+import { Filters } from "@/components/admin/filters";
 import { SubmissionDetails } from "@/components/admin/submission-details";
 import { Combobox } from "@/components/ui/combobox";
 
@@ -265,20 +266,23 @@ export default function AdminDashboard() {
         title="Dashboard de Acompanhamento"
         description="Visualize os registros de merenda e gere relatórios"
         actions={headerActions}
-        date={date}
-        setDate={setDate}
-        filterType={filterType}
-        setFilterType={setFilterType}
-        selectedSchool={selectedSchool}
-        setSelectedSchool={setSelectedSchool}
-        selectedStatus={selectedStatus}
-        setSelectedStatus={setSelectedStatus}
-        helpNeededFilter={helpNeededFilter}
-        setHelpNeededFilter={setHelpNeededFilter}
-        schools={schools}
-        statusTranslations={statusTranslations}
       >
-        <div className="space-y-6">
+        <div className="space-y-8">
+          <Filters
+            date={date}
+            setDate={setDate}
+            filterType={filterType}
+            setFilterType={setFilterType}
+            selectedSchool={selectedSchool}
+            setSelectedSchool={setSelectedSchool}
+            selectedStatus={selectedStatus}
+            setSelectedStatus={setSelectedStatus}
+            helpNeededFilter={helpNeededFilter}
+            setHelpNeededFilter={setHelpNeededFilter}
+            schools={schools}
+            statusTranslations={statusTranslations}
+          />
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card className="rounded-2xl shadow-xl shadow-blue-900/5 border-0 bg-white/80 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
