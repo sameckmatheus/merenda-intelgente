@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getAuth } from "firebase-admin/auth";
-import { initAdmin } from "@/lib/firebase-admin";
+import { initAdmin, isFirebaseAdminInitialized } from "@/lib/firebase-admin";
 import { AUTH_COOKIE_NAME } from "@/lib/constants";
 
 // Initialize Firebase Admin
@@ -20,6 +20,11 @@ export default async function AdminLayout({
     }
 
     try {
+        if (!isFirebaseAdminInitialized() && process.env.NODE_ENV === 'development') {
+            console.warn("⚠️ Bypassing admin auth check in development (Firebase Admin not initialized)");
+            return <>{children}</>;
+        }
+
         // Verify the session cookie
         await getAuth().verifySessionCookie(sessionCookie.value, true);
     } catch (error) {

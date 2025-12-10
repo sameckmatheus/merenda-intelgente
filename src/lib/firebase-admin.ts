@@ -32,3 +32,8 @@ export function initAdmin() {
 
 // Ensure it's initialized on module load in the server environment.
 initAdmin();
+
+export function isFirebaseAdminInitialized() {
+  return !!app;
+}
+

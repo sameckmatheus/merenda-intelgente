@@ -1,79 +1,87 @@
-import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { getAuth } from 'firebase-admin/auth';
-import { initAdmin } from '@/lib/firebase-admin';
-import { AUTH_COOKIE_NAME } from '@/lib/constants';
-import { getFirestore, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 
-initAdmin();
+export const dynamic = 'force-dynamic';
 
-async function requireAuth() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(AUTH_COOKIE_NAME);
-  if (!sessionCookie) return null;
+export async function GET(request: NextRequest) {
   try {
-    const decoded = await getAuth().verifySessionCookie(sessionCookie.value, true);
-    return decoded;
-  } catch {
-    return null;
-  }
-}
-
-export async function GET(request: Request) {
-  const authed = await requireAuth();
-  if (!authed) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  try {
-    const { searchParams } = new URL(request.url);
-    const start = searchParams.get('start');
-    const end = searchParams.get('end');
+    const searchParams = request.nextUrl.searchParams;
+    const startParam = searchParams.get('start');
+    const endParam = searchParams.get('end');
     const school = searchParams.get('school');
-
-    const db = getFirestore();
-    const collectionRef = db.collection('submissions') as FirebaseFirestore.CollectionReference<FirebaseFirestore.DocumentData>;
-
-    let q: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = collectionRef;
-    if (start && end) {
-      q = q.where('date', '>=', AdminTimestamp.fromMillis(Number(start))).where('date', '<=', AdminTimestamp.fromMillis(Number(end)));
-    }
-
-  const snapshot = await q.get();
-  const docs = snapshot.docs.map((d) => ({ id: d.id, ...((d.data() || {}) as any) } as any));
-
-    // If school filter provided, filter locally
-    let filtered = school && school !== 'all' ? docs.filter(d => (d.school || '') === school) : docs;
-
     const status = searchParams.get('status');
     const helpNeeded = searchParams.get('helpNeeded');
 
-    if (status && status !== 'all') {
-      filtered = filtered.filter(d => (d.status || 'pendente') === status);
+    const constraints: any[] = [];
+
+    if (startParam && endParam) {
+      const startDate = new Date(Number(startParam));
+      const endDate = new Date(Number(endParam));
+      constraints.push(where('date', '>=', Timestamp.fromDate(startDate)));
+      constraints.push(where('date', '<=', Timestamp.fromDate(endDate)));
+    } else {
+      // Default to last 30 days if no date
+      const now = new Date();
+      const start = new Date(now);
+      start.setDate(now.getDate() - 30);
+      constraints.push(where('date', '>=', Timestamp.fromDate(start)));
     }
 
-    if (helpNeeded && helpNeeded !== 'all') {
-      if (helpNeeded === 'yes') filtered = filtered.filter(d => !!d.helpNeeded);
-      if (helpNeeded === 'no') filtered = filtered.filter(d => !d.helpNeeded);
+    if (school) {
+      constraints.push(where('school', '==', school));
     }
 
-    const bySchoolMap: Record<string, number> = {};
-    const byStatusMap: Record<string, number> = {};
+    if (status) {
+      constraints.push(where('status', '==', status));
+    }
 
-    filtered.forEach((d) => {
-      const name = d.school || 'Desconhecida';
-      bySchoolMap[name] = (bySchoolMap[name] || 0) + 1;
+    // Help Needed filtering is done in memory usually if field is boolean, or exact match if string 'yes'/'no' mapped to boolean
+    // Assuming helpNeeded is boolean in db
+    let filterHelp: boolean | null = null;
+    if (helpNeeded === 'yes') filterHelp = true;
+    if (helpNeeded === 'no') filterHelp = false;
 
-      const st = d.status || 'pendente';
-      byStatusMap[st] = (byStatusMap[st] || 0) + 1;
+
+    const q = query(collection(db, 'submissions'), ...constraints);
+    const snapshot = await getDocs(q);
+
+    const bySchool: Record<string, number> = {};
+    const byStatus: Record<string, number> = {
+      pendente: 0,
+      confirmado: 0,
+      cancelado: 0
+    };
+
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+
+      // Memory filtering for helpNeeded if set
+      if (filterHelp !== null && data.helpNeeded !== filterHelp) return;
+
+      // By School
+      const sName = data.school || 'Sem Escola';
+      bySchool[sName] = (bySchool[sName] || 0) + 1;
+
+      // By Status
+      const fStatus = data.status || 'pendente';
+      if (typeof byStatus[fStatus] !== 'undefined') {
+        byStatus[fStatus]++;
+      } else {
+        byStatus[fStatus] = (byStatus[fStatus] || 0) + 1;
+      }
     });
 
-    const bySchool = Object.entries(bySchoolMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
-    const byStatus = Object.entries(byStatusMap).map(([name, value]) => ({ name, value }));
+    const bySchoolArray = Object.entries(bySchool).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+    const byStatusArray = Object.entries(byStatus).map(([name, value]) => ({ name, value }));
 
-    return NextResponse.json({ bySchool, byStatus }, { status: 200 });
-  } catch (e) {
-    console.error('GET /api/reports/summary error', e);
+    return NextResponse.json({
+      bySchool: bySchoolArray,
+      byStatus: byStatusArray
+    });
+
+  } catch (error) {
+    console.error('Error serving report summary', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

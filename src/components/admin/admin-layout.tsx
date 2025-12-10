@@ -40,8 +40,8 @@ export function AdminLayout({
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 via-white to-blue-50">
       <header className="sticky top-0 z-50 w-full border-b border-blue-100 bg-white/80 backdrop-blur-md">
-        <div className="container mx-auto max-w-7xl px-4 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-8">
+        <div className="container mx-auto max-w-7xl px-4 h-20 flex items-center justify-between relative">
+          <div className="flex items-center gap-4">
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menu">
@@ -78,26 +78,26 @@ export function AdminLayout({
             <Link href="/admin" className="hidden md:flex items-center gap-2">
               <span className="font-headline font-bold text-xl text-blue-950">MenuPlanner</span>
             </Link>
-
-            <nav className="hidden md:flex items-center gap-1">
-              {menuItems.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all hover:bg-blue-50 hover:text-blue-900",
-                      isActive ? "bg-blue-100/50 text-blue-900" : "text-slate-600"
-                    )}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {item.title}
-                  </Link>
-                );
-              })}
-            </nav>
           </div>
+
+          <nav className="hidden md:flex items-center gap-1 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+            {menuItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all hover:bg-blue-50 hover:text-blue-900",
+                    isActive ? "bg-blue-100/50 text-blue-900" : "text-slate-600"
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.title}
+                </Link>
+              );
+            })}
+          </nav>
 
           <div className="flex items-center gap-4">
             {actions}
