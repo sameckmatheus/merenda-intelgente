@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Lock, LogIn, LoaderCircle, KeyRound } from 'lucide-react';
+import { Lock, LogIn, LoaderCircle, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -31,6 +31,7 @@ export default function LoginForm() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -115,6 +116,7 @@ export default function LoginForm() {
                 <FormControl>
                   <Input
                     className="pl-10 h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:ring-blue-500 transition-all hover:bg-white"
+                    placeholder="Digite seu email"
                     {...field}
                   />
                 </FormControl>
@@ -135,13 +137,26 @@ export default function LoginForm() {
               <div className="relative">
                 <FormControl>
                   <Input
-                    className="pl-10 h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:ring-blue-500 transition-all hover:bg-white"
+                    type={showPassword ? 'text' : 'password'}
+                    className="pl-10 h-12 rounded-xl bg-slate-50/50 border-slate-200 focus:ring-blue-500 transition-all hover:bg-white pr-10"
+                    placeholder="Digite sua senha de acesso"
                     {...field}
                   />
                 </FormControl>
                 <div className="absolute left-3 top-3.5 text-slate-400 pointer-events-none">
                   <Lock className="w-5 h-5" />
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3.5 text-slate-400 hover:text-blue-600 transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
               <FormMessage />
             </FormItem>

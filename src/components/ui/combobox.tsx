@@ -35,6 +35,7 @@ interface ComboboxProps {
     className?: string
     disabled?: boolean
     modalTitle?: string
+    hideSearch?: boolean
 }
 
 export function Combobox({
@@ -46,7 +47,8 @@ export function Combobox({
     emptyMessage = "Não encontrado.",
     className,
     disabled,
-    modalTitle = "Selecione uma opção"
+    modalTitle = "Selecione uma opção",
+    hideSearch = false
 }: ComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
@@ -75,13 +77,15 @@ export function Combobox({
             <DialogContent className="p-0 overflow-hidden max-w-md bg-white border-0 shadow-2xl rounded-2xl">
                 <DialogTitle className="sr-only">{modalTitle}</DialogTitle>
                 <Command className="border-0 w-full">
-                    <div className="flex items-center border-b border-slate-100 px-3 bg-slate-50/50">
-                        <Search className="mr-2 h-5 w-5 shrink-0 text-slate-400" />
-                        <CommandInput
-                            placeholder={searchPlaceholder}
-                            className="border-0 focus:ring-0 text-base h-14 bg-transparent selection:bg-blue-100"
-                        />
-                    </div>
+                    {!hideSearch && (
+                        <div className="flex items-center border-b border-slate-100 px-3 bg-slate-50/50">
+                            <Search className="mr-2 h-5 w-5 shrink-0 text-slate-400" />
+                            <CommandInput
+                                placeholder={searchPlaceholder}
+                                className="border-0 focus:ring-0 text-base h-14 bg-transparent selection:bg-blue-100"
+                            />
+                        </div>
+                    )}
                     <CommandList className="max-h-[300px] p-2">
                         <CommandEmpty className="py-6 text-center text-slate-500 text-sm">{emptyMessage}</CommandEmpty>
                         <CommandGroup>

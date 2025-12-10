@@ -26,7 +26,7 @@ export default function LoginPage() {
           <h1 className="font-headline text-3xl font-bold tracking-tight text-blue-950">
             Acesso Administrativo
           </h1>
-          <p className="text-blue-600/80 font-medium">MenuPlanner</p>
+          <p className="text-blue-600/80 font-medium">Smart Plate</p>
         </div>
       </div>
       <Card className="w-full max-w-sm rounded-3xl border-0 bg-white/60 shadow-2xl shadow-blue-900/10 backdrop-blur-md ring-1 ring-white/60 animate-in zoom-in-95 duration-500">

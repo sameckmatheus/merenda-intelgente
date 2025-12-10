@@ -281,6 +281,7 @@ export default function Home() {
                             searchPlaceholder="Procurar escola..."
                             emptyMessage="Nenhuma escola encontrada."
                             className="h-12 border-slate-200 bg-slate-50/50 rounded-xl"
+                            hideSearch={true}
                           />
                         </FormControl>
                         <FormMessage />
@@ -447,7 +448,7 @@ export default function Home() {
                     <CardContent className="p-6 space-y-6">
                       <FormField control={form.control} name="totalStudents" render={({ field }) => (
                         <FormItem className="space-y-3">
-                          <FormLabel className="text-slate-600 font-medium">Total (Matriculados)</FormLabel>
+                          <FormLabel className="text-slate-600 font-medium">Total <span className="block sm:inline mt-1 sm:mt-0 sm:ml-1"><span className="inline-flex items-center gap-1 font-bold bg-green-100/50 px-2 py-0.5 rounded text-green-700 border border-green-200/50">Matriculados</span></span></FormLabel>
                           <div className="relative">
                             <Users className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
                             <FormControl>
@@ -460,7 +461,7 @@ export default function Home() {
 
                       <FormField control={form.control} name="presentStudents" render={({ field }) => (
                         <FormItem className="space-y-3">
-                          <FormLabel className="text-slate-600 font-medium">Presentes (_hoje_)</FormLabel>
+                          <FormLabel className="text-slate-600 font-medium">Presentes<span className="block sm:inline mt-1 sm:mt-0 sm:ml-1"><span className="inline-flex items-center gap-1 font-bold bg-blue-100/50 px-2 py-0.5 rounded text-blue-700 border border-blue-200/50">Hoje</span></span></FormLabel>
                           <div className="relative">
                             <UserCheck className="absolute left-3 top-3.5 h-5 w-5 text-emerald-500" />
                             <FormControl>
