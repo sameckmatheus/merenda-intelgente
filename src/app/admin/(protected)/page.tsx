@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Timestamp, collection, deleteDoc, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
-import { LogOut, LoaderCircle, FileX2, Trash2, Users, HelpCircle, ShoppingBasket, FileDown, Building, MessageSquare, PackageCheck, Utensils, CalendarIcon } from "lucide-react";
+import { LogOut, LoaderCircle, FileX2, Trash2, Users, HelpCircle, ShoppingBasket, FileDown, Building, MessageSquare, PackageCheck, Utensils, CalendarIcon, GraduationCap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
@@ -22,6 +22,7 @@ import { AdminLayout } from "@/components/admin/admin-layout";
 import { Filters } from "@/components/admin/filters";
 import { SubmissionDetails } from "@/components/admin/submission-details";
 import { Combobox } from "@/components/ui/combobox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { Filter, Submission, menuTypeTranslations, statusTranslations } from "@/lib/types";
 import { db } from "@/lib/firebase";
@@ -418,102 +419,110 @@ export default function AdminDashboard() {
 
       {selectedSubmission && (
         <Dialog open={!!selectedSubmission} onOpenChange={(open) => !open && setSelectedSubmission(null)}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-xl">
-                <Building /> {selectedSubmission.school}
-              </DialogTitle>
-              <DialogDescription>
-                Registro de {selectedSubmission.respondentName} para o turno da {selectedSubmission.shift} em{' '}
-                {format(
-                  selectedSubmission.date instanceof Timestamp ? selectedSubmission.date.toDate() : new Date(typeof selectedSubmission.date === 'number' ? selectedSubmission.date : selectedSubmission.date),
-                  "PPP",
-                  { locale: ptBR }
-                )}.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
-              <Card className="bg-slate-50/50">
-                <CardContent className="p-4 grid grid-cols-2 gap-4">
-                  <DetailItem
-                    icon={<Users />}
-                    label="Alunos"
-                    value={`${selectedSubmission.presentStudents} presentes de ${selectedSubmission.totalStudents}`}
-                  />
-                  <DetailItem
-                    icon={<Utensils />}
-                    label="Cardápio Servido"
-                    value={menuTypeTranslations[selectedSubmission.menuType]}
-                  />
-                </CardContent>
-              </Card>
-
-              <DetailItem
-                icon={<MessageSquare />}
-                label="Detalhe Cardápio Alternativo"
-                value={selectedSubmission.alternativeMenuDescription}
-                fullWidth
-              />
-
-              <Separator />
-
-              <div className="p-4 border rounded-lg bg-amber-50 border-amber-200 space-y-4">
-                <h3 className="font-bold text-amber-900 flex items-center gap-2">
-                  <HelpCircle /> Seção de Ajuda
-                </h3>
-                <DetailItem
-                  icon={<HelpCircle className="text-amber-700" />}
-                  label="Pedido de Ajuda"
-                  value={selectedSubmission.helpNeeded}
-                />
-                <DetailItem
-                  icon={<MessageSquare />}
-                  label="Itens em Falta"
-                  value={selectedSubmission.missingItems}
-                  fullWidth
-                />
-                <DetailItem
-                  icon={<ShoppingBasket />}
-                  label="Pode Comprar os Itens?"
-                  value={selectedSubmission.canBuyMissingItems}
-                />
-                <DetailItem
-                  icon={<ShoppingBasket />}
-                  label="Itens Comprados"
-                  value={selectedSubmission.itemsPurchased}
-                  fullWidth
-                />
-              </div>
-
-              <Separator />
-
-              <div className="p-4 border rounded-lg bg-slate-50 space-y-4">
-                <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                  <PackageCheck /> Seção de Suprimentos
-                </h3>
-                <DetailItem
-                  icon={<PackageCheck />}
-                  label="Recebeu Suprimentos?"
-                  value={selectedSubmission.suppliesReceived}
-                />
-                <DetailItem
-                  icon={<MessageSquare />}
-                  label="Suprimentos Recebidos"
-                  value={selectedSubmission.suppliesDescription}
-                  fullWidth
-                />
-              </div>
-
-              <Separator />
-
-              <DetailItem
-                icon={<MessageSquare />}
-                label="Observações Gerais"
-                value={selectedSubmission.observations}
-                fullWidth
-              />
+          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden bg-slate-50/95 backdrop-blur-xl border-white/20 gap-0">
+            <div className="p-6 bg-white border-b border-slate-100 shadow-sm relative overflow-hidden shrink-0">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+              <DialogHeader className="relative z-10 text-left">
+                <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-slate-800">
+                  <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                    <GraduationCap className="w-6 h-6" />
+                  </div>
+                  {selectedSubmission.school}
+                </DialogTitle>
+                <DialogDescription className="text-slate-500 text-left">
+                  Registro de {selectedSubmission.respondentName} para o turno da {selectedSubmission.shift} em{' '}
+                  {format(
+                    selectedSubmission.date instanceof Timestamp ? selectedSubmission.date.toDate() : new Date(typeof selectedSubmission.date === 'number' ? selectedSubmission.date : selectedSubmission.date),
+                    "PPP",
+                    { locale: ptBR }
+                  )}.
+                </DialogDescription>
+              </DialogHeader>
             </div>
+
+            <ScrollArea className="flex-1 w-full p-6">
+              <div className="space-y-4">
+                <Card className="bg-slate-50/50">
+                  <CardContent className="p-4 grid grid-cols-2 gap-4">
+                    <DetailItem
+                      icon={<Users />}
+                      label="Alunos"
+                      value={`${selectedSubmission.presentStudents} presentes de ${selectedSubmission.totalStudents}`}
+                    />
+                    <DetailItem
+                      icon={<Utensils />}
+                      label="Cardápio Servido"
+                      value={menuTypeTranslations[selectedSubmission.menuType]}
+                    />
+                  </CardContent>
+                </Card>
+
+                <DetailItem
+                  icon={<MessageSquare />}
+                  label="Detalhe Cardápio Alternativo"
+                  value={selectedSubmission.alternativeMenuDescription}
+                  fullWidth
+                />
+
+                <Separator />
+
+                <div className="p-4 border rounded-lg bg-amber-50 border-amber-200 space-y-4">
+                  <h3 className="font-bold text-amber-900 flex items-center gap-2">
+                    <HelpCircle /> Seção de Ajuda
+                  </h3>
+                  <DetailItem
+                    icon={<HelpCircle className="text-amber-700" />}
+                    label="Pedido de Ajuda"
+                    value={selectedSubmission.helpNeeded}
+                  />
+                  <DetailItem
+                    icon={<MessageSquare />}
+                    label="Itens em Falta"
+                    value={selectedSubmission.missingItems}
+                    fullWidth
+                  />
+                  <DetailItem
+                    icon={<ShoppingBasket />}
+                    label="Pode Comprar os Itens?"
+                    value={selectedSubmission.canBuyMissingItems}
+                  />
+                  <DetailItem
+                    icon={<ShoppingBasket />}
+                    label="Itens Comprados"
+                    value={selectedSubmission.itemsPurchased}
+                    fullWidth
+                  />
+                </div>
+
+                <Separator />
+
+                <div className="p-4 border rounded-lg bg-slate-50 space-y-4">
+                  <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                    <PackageCheck /> Seção de Suprimentos
+                  </h3>
+                  <DetailItem
+                    icon={<PackageCheck />}
+                    label="Recebeu Suprimentos?"
+                    value={selectedSubmission.suppliesReceived}
+                  />
+                  <DetailItem
+                    icon={<MessageSquare />}
+                    label="Suprimentos Recebidos"
+                    value={selectedSubmission.suppliesDescription}
+                    fullWidth
+                  />
+                </div>
+
+                <Separator />
+
+                <DetailItem
+                  icon={<MessageSquare />}
+                  label="Observações Gerais"
+                  value={selectedSubmission.observations}
+                  fullWidth
+                />
+              </div>
+            </ScrollArea>
           </DialogContent>
         </Dialog>
       )}

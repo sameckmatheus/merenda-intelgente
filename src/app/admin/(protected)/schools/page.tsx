@@ -125,23 +125,23 @@ const SchoolDetailsModal = ({ school, isOpen, onClose }: { school: string | null
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden bg-slate-50/95 backdrop-blur-xl border-white/20">
-        <div className="p-6 bg-white border-b border-slate-100 shadow-sm relative overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden bg-slate-50/95 backdrop-blur-xl border-white/20 gap-0">
+        <div className="p-6 bg-white border-b border-slate-100 shadow-sm relative overflow-hidden shrink-0">
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
-          <DialogHeader className="relative z-10">
+          <DialogHeader className="relative z-10 text-left">
             <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-slate-800">
               <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
                 <GraduationCap className="w-6 h-6" />
               </div>
               {school}
             </DialogTitle>
-            <DialogDescription className="text-slate-500">
+            <DialogDescription className="text-slate-500 text-left">
               Visão geral e histórico completo da escola.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <ScrollArea className="flex-1 p-6">
+        <ScrollArea className="flex-1 w-full p-6">
           {isLoading ? (
             <div className="h-64 flex items-center justify-center text-slate-400">Carregando dados da escola...</div>
           ) : (
@@ -262,7 +262,7 @@ export default function AdminSchools() {
       .catch(err => console.error("Failed to fetch summaries", err));
   }, []);
 
-  const getCount = (name: string) => schoolSummaries.find(s => s.name === name)?.count || 0;
+  const getCount = (name: string) => schoolSummaries.find(s => s.name.toLowerCase() === name.toLowerCase())?.count || 0;
 
   const filteredSchools = schoolsList.filter(s => s.toLowerCase().includes(searchTerm.toLowerCase()));
 
