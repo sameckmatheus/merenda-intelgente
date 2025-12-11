@@ -508,17 +508,9 @@ export default function AdminReports() {
                           axisLine={false}
                           tickFormatter={(value) => `${value}`}
                           dx={-10}
-                          domain={[0, 'auto']}
+                          domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax, 1) / 10) * 10]}
                           allowDecimals={false}
-                          tickCount={6} // Helps spread them out, but we want exact 10s? Recharts is tricky with exact steps.
-                          // Let's force ticks to be multiples of 10
-                          ticks={(() => {
-                            const max = Math.max(...timeSeries.map(d => d.count), 1);
-                            const top = Math.ceil(max / 10) * 10;
-                            const ticks = [];
-                            for (let i = 0; i <= top; i += 10) ticks.push(i);
-                            return ticks;
-                          })()}
+                          tickCount={6}
                         />
                         <ChartTooltip
                           content={<ChartTooltipContent indicator="dot" />}
