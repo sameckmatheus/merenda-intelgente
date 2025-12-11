@@ -21,9 +21,9 @@ async function requireAuth() {
 
 export async function PATCH(
   _request: Request,
-  context: any
+  props: { params: Promise<{ id: string }> }
 ) {
-  const { params } = context || {};
+  const params = await props.params;
   const authed = await requireAuth();
   if (!authed) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
