@@ -59,10 +59,22 @@ export async function GET(request: Request) {
     // provided, query by school directly.
     let docs: FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>[] = [];
 
+    // Helper for normalizing strings (remove accents, lowercase)
+    function normalizeString(str: string): string {
+      return str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+    }
+
+    // ...
+
     // Se temos filtro por escola e data, precisamos filtrar escola localmente
     if (school && school !== 'all' && start && end) {
       const snapshot = await q.get();
-      docs = snapshot.docs.filter((d) => (d.data()?.school || '') === school);
+      const targetSchool = normalizeString(school);
+      docs = snapshot.docs.filter((d) => normalizeString(d.data()?.school || '') === targetSchool);
     }
     // Se temos apenas escola, podemos filtrar direto no Firestore
     else if (school && school !== 'all') {

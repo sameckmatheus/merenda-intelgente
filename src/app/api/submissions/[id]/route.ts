@@ -21,8 +21,9 @@ async function requireAuth() {
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   const authed = await requireAuth();
   if (!authed) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

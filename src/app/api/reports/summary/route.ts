@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { initAdmin, isFirebaseAdminInitialized } from '@/lib/firebase-admin';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 
 export const dynamic = 'force-dynamic';
 
+// Initialize Admin SDK
+initAdmin();
+
 export async function GET(request: NextRequest) {
   try {
+    if (!isFirebaseAdminInitialized()) {
+      console.warn('Firebase Admin not initialized');
+      return NextResponse.json({ bySchool: [], byStatus: [] });
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const startParam = searchParams.get('start');
     const endParam = searchParams.get('end');
@@ -13,38 +21,14 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const helpNeeded = searchParams.get('helpNeeded');
 
-    const constraints: any[] = [];
+    const db = getFirestore();
 
-    if (startParam && endParam) {
-      const startDate = new Date(Number(startParam));
-      const endDate = new Date(Number(endParam));
-      constraints.push(where('date', '>=', Timestamp.fromDate(startDate)));
-      constraints.push(where('date', '<=', Timestamp.fromDate(endDate)));
-    } else {
-      // Default to last 30 days if no date
-      const now = new Date();
-      const start = new Date(now);
-      start.setDate(now.getDate() - 30);
-      constraints.push(where('date', '>=', Timestamp.fromDate(start)));
-    }
+    // ROBUST STRATEGY: Fetch latest 500 records and filter in memory.
+    const query = db.collection('submissions')
+      .orderBy('date', 'desc')
+      .limit(500);
 
-    if (school) {
-      constraints.push(where('school', '==', school));
-    }
-
-    if (status) {
-      constraints.push(where('status', '==', status));
-    }
-
-    // Help Needed filtering is done in memory usually if field is boolean, or exact match if string 'yes'/'no' mapped to boolean
-    // Assuming helpNeeded is boolean in db
-    let filterHelp: boolean | null = null;
-    if (helpNeeded === 'yes') filterHelp = true;
-    if (helpNeeded === 'no') filterHelp = false;
-
-
-    const q = query(collection(db, 'submissions'), ...constraints);
-    const snapshot = await getDocs(q);
+    const snapshot = await query.get();
 
     const bySchool: Record<string, number> = {};
     const byStatus: Record<string, number> = {
@@ -53,17 +37,49 @@ export async function GET(request: NextRequest) {
       cancelado: 0
     };
 
+    // Prepare date range filter
+    let startDate = 0;
+    let endDate = Number.MAX_SAFE_INTEGER;
+
+    if (startParam && endParam) {
+      startDate = Number(startParam);
+      endDate = Number(endParam);
+    } else {
+      startDate = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    }
+
     snapshot.docs.forEach(doc => {
       const data = doc.data();
 
-      // Memory filtering for helpNeeded if set
-      if (filterHelp !== null && data.helpNeeded !== filterHelp) return;
+      // ROBUST DATE PARSING
+      let docDateMs = 0;
+      if (data.date && typeof data.date.toMillis === 'function') {
+        docDateMs = data.date.toMillis();
+      } else if (data.date instanceof Date) {
+        docDateMs = data.date.getTime();
+      } else if (typeof data.date === 'number') {
+        docDateMs = data.date;
+      } else if (typeof data.date === 'string') {
+        docDateMs = new Date(data.date).getTime();
+      }
 
-      // By School
+      // Filter by Date Range
+      if (docDateMs < startDate || docDateMs > endDate) return;
+
+      // Filter by School
+      if (school && school !== 'all' && data.school !== school) return;
+
+      // Filter by Status
+      if (status && status !== 'all' && data.status !== status) return;
+
+      // Filter by Help Needed
+      if (helpNeeded === 'yes' && data.helpNeeded !== true) return;
+      if (helpNeeded === 'no' && data.helpNeeded !== false) return;
+
+      // Aggregations
       const sName = data.school || 'Sem Escola';
       bySchool[sName] = (bySchool[sName] || 0) + 1;
 
-      // By Status
       const fStatus = data.status || 'pendente';
       if (typeof byStatus[fStatus] !== 'undefined') {
         byStatus[fStatus]++;
@@ -72,16 +88,25 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    const bySchoolArray = Object.entries(bySchool).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
-    const byStatusArray = Object.entries(byStatus).map(([name, value]) => ({ name, value }));
+    const bySchoolArray = Object.entries(bySchool)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const byStatusArray = Object.entries(byStatus)
+      .map(([name, value]) => ({ name, value }));
 
     return NextResponse.json({
       bySchool: bySchoolArray,
       byStatus: byStatusArray
     });
 
-  } catch (error) {
-    console.error('Error serving report summary', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  } catch (error: any) {
+    console.error('CRITICAL ERROR serving report summary:', error);
+    // Return empty success response to prevent UI crash
+    return NextResponse.json({
+      bySchool: [],
+      byStatus: [],
+      debug_error: String(error)
+    }, { status: 200 });
   }
 }

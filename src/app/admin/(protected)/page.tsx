@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Timestamp, collection, deleteDoc, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
-import { LogOut, LoaderCircle, FileX2, Trash2, Users, HelpCircle, ShoppingBasket, FileDown, Building, MessageSquare, PackageCheck, Utensils, CalendarIcon, GraduationCap } from "lucide-react";
+import { LogOut, LoaderCircle, FileX2, Trash2, Users, HelpCircle, ShoppingBasket, FileDown, Building, MessageSquare, PackageCheck, Utensils, CalendarIcon, GraduationCap, TrendingUp, TrendingDown, FileText } from "lucide-react";
+
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
@@ -262,6 +263,63 @@ export default function AdminDashboard() {
     </div>
   );
 
+  const KpiCard = ({ title, value, subtitle, icon: Icon, colorClass, trend }: { title: string, value: number, subtitle: string, icon: any, colorClass: string, trend?: 'up' | 'down' | 'neutral' }) => (
+    <Card className="relative overflow-hidden border-0 shadow-lg shadow-blue-900/5 bg-white transition-all hover:-translate-y-1 hover:shadow-xl">
+      <div className={cn("absolute top-0 right-0 w-32 h-32 bg-gradient-to-br opacity-10 rounded-full blur-3xl -mr-16 -mt-16", colorClass)}></div>
+      <CardContent className="p-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
+            <h3 className="text-3xl font-bold text-slate-900">{value}</h3>
+          </div>
+          <div className={cn("p-3 rounded-xl", colorClass.replace('from-', 'bg-').split(' ')[0])}>
+            <Icon className="w-6 h-6 text-white" />
+          </div>
+        </div>
+        <div className="mt-4 flex items-center gap-2">
+          {trend === 'up' && <TrendingUp className="w-4 h-4 text-emerald-500" />}
+          {trend === 'down' && <TrendingDown className="w-4 h-4 text-red-500" />}
+          <p className="text-xs font-medium text-slate-400">{subtitle}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const KpiCards = ({ submissions }: { submissions: Submission[] }) => {
+    const totalRecords = submissions.length;
+    const totalHelp = submissions.filter(s => s.helpNeeded).length;
+    const totalPurchased = submissions.filter(s => s.itemsPurchased).length;
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <KpiCard
+          title="Total de Registros"
+          value={totalRecords}
+          subtitle="No período selecionado"
+          icon={FileText} // Changed from Users to FileText to match reports or keep Users if preferred? User said 'troque os cards', implying exact copy. Reports uses FileText.
+          colorClass="from-blue-600 to-indigo-600"
+          trend="up"
+        />
+        <KpiCard
+          title="Pedidos de Ajuda"
+          value={totalHelp}
+          subtitle="Solicitações de itens"
+          icon={HelpCircle}
+          colorClass="from-amber-500 to-orange-500"
+          trend="neutral"
+        />
+        <KpiCard
+          title="Compras Realizadas"
+          value={totalPurchased}
+          subtitle="Compras emergenciais"
+          icon={ShoppingBasket} // Reports uses ShoppingCart, Dashboard uses ShoppingBasket. I will use ShoppingCart to match reports exactly if possible, or keep ShoppingBasket if imported. Dashboard imports ShoppingBasket, Reports imports ShoppingCart. I should check imports.
+          colorClass="from-emerald-500 to-teal-500"
+          trend="down"
+        />
+      </div>
+    );
+  };
+
   return (
     <>
       <AdminLayout
@@ -285,44 +343,7 @@ export default function AdminDashboard() {
             statusTranslations={statusTranslations}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="rounded-2xl shadow-xl shadow-blue-900/5 border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">Total de Registros</CardTitle>
-                <div className="p-3 rounded-xl bg-blue-600">
-                  <Users className="h-4 w-4 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-slate-900">{filteredSubmissions.length}</div>
-                <p className="text-xs text-slate-500 font-medium mt-1">no período selecionado</p>
-              </CardContent>
-            </Card>
-            <Card className="rounded-2xl shadow-xl shadow-blue-900/5 border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">Pedidos de Ajuda</CardTitle>
-                <div className="p-3 rounded-xl bg-amber-500">
-                  <HelpCircle className="h-4 w-4 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-slate-900">{filteredSubmissions.filter(s => s.helpNeeded).length}</div>
-                <p className="text-xs text-slate-500 font-medium mt-1">solicitações de itens em falta</p>
-              </CardContent>
-            </Card>
-            <Card className="rounded-2xl shadow-xl shadow-blue-900/5 border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-600">Compras Realizadas</CardTitle>
-                <div className="p-3 rounded-xl bg-emerald-600">
-                  <ShoppingBasket className="h-4 w-4 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-slate-900">{filteredSubmissions.filter(s => s.itemsPurchased).length}</div>
-                <p className="text-xs text-slate-500 font-medium mt-1">compras emergenciais registradas</p>
-              </CardContent>
-            </Card>
-          </div>
+          <KpiCards submissions={filteredSubmissions} />
 
           {isLoading ? (
             <div className="flex justify-center items-center h-64">

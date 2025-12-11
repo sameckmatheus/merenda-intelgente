@@ -245,6 +245,14 @@ const SchoolDetailsModal = ({ school, isOpen, onClose }: { school: string | null
   );
 };
 
+const normalizeString = (str: string) => {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+};
+
 export default function AdminSchools() {
   const [searchTerm, setSearchTerm] = useState("");
   const [schoolSummaries, setSchoolSummaries] = useState<SchoolSummary[]>([]);
@@ -262,7 +270,10 @@ export default function AdminSchools() {
       .catch(err => console.error("Failed to fetch summaries", err));
   }, []);
 
-  const getCount = (name: string) => schoolSummaries.find(s => s.name.toLowerCase() === name.toLowerCase())?.count || 0;
+  const getCount = (name: string) => {
+    const target = normalizeString(name);
+    return schoolSummaries.find(s => normalizeString(s.name) === target)?.count || 0;
+  };
 
   const filteredSchools = schoolsList.filter(s => s.toLowerCase().includes(searchTerm.toLowerCase()));
 
