@@ -280,7 +280,7 @@ export default function AdminReports() {
   const [bySchool, setBySchool] = useState<{ name: string; count: number }[]>([]);
   const [byStatus, setByStatus] = useState<{ name: string; value: number }[]>([]);
   const [submissionsRaw, setSubmissionsRaw] = useState<any[]>([]);
-  const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('area');
+  const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('line');
   const [metricType, setMetricType] = useState<'total' | 'confirmed'>('total');
   const [timeSeries, setTimeSeries] = useState<Array<{ date: string; label: string; count: number;[k: string]: any }>>([]);
   const [seriesKeys, setSeriesKeys] = useState<string[]>([]);
@@ -485,58 +485,60 @@ export default function AdminReports() {
                 <div className="h-full flex items-center justify-center text-slate-400">Carregando dados...</div>
               ) : (
                 <div className="h-full w-full">
-                  <ChartContainer
-                    config={Object.fromEntries(seriesKeys.map((k) => [k, { label: k, color: seriesColors[k] }]))}
-                    className="h-full w-full"
-                  >
-                    <AreaChart data={timeSeries} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <defs>
-                        {seriesKeys.filter(k => enabledSeries[k]).map((k, i) => (
-                          <linearGradient key={`gradient-${k}`} id={`gradient-${k}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={seriesColors[k]} stopOpacity={0.3} />
-                            <stop offset="95%" stopColor={seriesColors[k]} stopOpacity={0} />
-                          </linearGradient>
-                        ))}
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis
-                        dataKey="label"
-                        stroke="#64748b"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        dy={10}
-                      />
-                      <YAxis
-                        stroke="#64748b"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(value) => `${value}`}
-                        dx={-10}
-                      />
-                      <ChartTooltip
-                        content={<ChartTooltipContent indicator="dot" />}
-                        cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }}
-                      />
-                      {seriesKeys.filter(k => enabledSeries[k]).map((k) => (
-                        chartType === 'area' ? (
-                          <Area
+
+                  <div className="h-full w-full">
+                    <ChartContainer
+                      config={Object.fromEntries(seriesKeys.map((k) => [k, { label: k, color: seriesColors[k] }]))}
+                      className="h-full w-full"
+                    >
+                      <LineChart data={timeSeries} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                        <XAxis
+                          dataKey="label"
+                          stroke="#64748b"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                          dy={10}
+                        />
+                        <YAxis
+                          stroke="#64748b"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(value) => `${value}`}
+                          dx={-10}
+                          domain={[0, 'auto']}
+                          allowDecimals={false}
+                          tickCount={6} // Helps spread them out, but we want exact 10s? Recharts is tricky with exact steps.
+                          // Let's force ticks to be multiples of 10
+                          ticks={(() => {
+                            const max = Math.max(...timeSeries.map(d => d.count), 1);
+                            const top = Math.ceil(max / 10) * 10;
+                            const ticks = [];
+                            for (let i = 0; i <= top; i += 10) ticks.push(i);
+                            return ticks;
+                          })()}
+                        />
+                        <ChartTooltip
+                          content={<ChartTooltipContent indicator="dot" />}
+                          cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }}
+                        />
+                        {seriesKeys.filter(k => enabledSeries[k]).map((k) => (
+                          <Line
                             key={k}
                             type="monotone"
                             dataKey={k}
                             stroke={seriesColors[k]}
-                            fill={`url(#gradient-${k})`}
                             strokeWidth={3}
+                            dot={{ r: 4, fill: seriesColors[k], strokeWidth: 0 }}
+                            activeDot={{ r: 6 }}
                           />
-                        ) : chartType === 'bar' ? (
-                          <Bar key={k} dataKey={k} fill={seriesColors[k]} radius={[4, 4, 0, 0]} maxBarSize={50} />
-                        ) : (
-                          <Line key={k} type="monotone" dataKey={k} stroke={seriesColors[k]} strokeWidth={3} dot={{ r: 4, fill: seriesColors[k], strokeWidth: 0 }} />
-                        )
-                      ))}
-                    </AreaChart>
-                  </ChartContainer>
+                        ))}
+                        <ChartLegend content={<ChartLegendContent />} className="mt-4" />
+                      </LineChart>
+                    </ChartContainer>
+                  </div>
                 </div>
               )}
             </CardContent>
