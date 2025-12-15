@@ -33,8 +33,9 @@ export async function GET(request: NextRequest) {
     const bySchool: Record<string, number> = {};
     const byStatus: Record<string, number> = {
       pendente: 0,
-      confirmado: 0,
-      cancelado: 0
+      atendido: 0,
+      atendido_parcialmente: 0,
+      recusado: 0
     };
 
     // Prepare date range filter

@@ -39,8 +39,9 @@ const COLORS = [
 
 const STATUS_COLORS = {
   pendente: '#fbbf24', // Amber 400
-  confirmado: '#34d399', // Emerald 400
-  cancelado: '#f87171', // Red 400
+  atendido: '#10b981', // Emerald 500
+  atendido_parcialmente: '#3b82f6', // Blue 500
+  recusado: '#ef4444', // Red 500
 } as const;
 
 type Status = keyof typeof STATUS_COLORS;
@@ -122,8 +123,9 @@ const StatusDistributionChart: FC<{ data: { name: string, value: number }[], isL
             <ChartContainer
               config={{
                 pendente: { label: 'Pendente', color: STATUS_COLORS.pendente },
-                confirmado: { label: 'Confirmado', color: STATUS_COLORS.confirmado },
-                cancelado: { label: 'Cancelado', color: STATUS_COLORS.cancelado },
+                atendido: { label: 'Atendido', color: STATUS_COLORS.atendido },
+                atendido_parcialmente: { label: 'Parcial', color: STATUS_COLORS.atendido_parcialmente },
+                recusado: { label: 'Recusado', color: STATUS_COLORS.recusado },
               }}
               className="h-full w-full"
             >
@@ -145,11 +147,11 @@ const StatusDistributionChart: FC<{ data: { name: string, value: number }[], isL
                 />
                 <ChartLegend
                   content={({ payload }) => (
-                    <div className="flex justify-center gap-4 mt-4">
+                    <div className="flex justify-center gap-4 mt-4 flex-wrap">
                       {payload?.map((entry: any, index) => (
                         <div key={`legend-${index}`} className="flex items-center gap-2 text-sm text-slate-600">
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-                          <span className="capitalize">{entry.value}</span>
+                          <span className="capitalize">{entry.payload?.label || entry.value}</span>
                         </div>
                       ))}
                     </div>
@@ -166,6 +168,7 @@ const StatusDistributionChart: FC<{ data: { name: string, value: number }[], isL
   );
 };
 
+
 const RecentActivity: FC<{ submissions: any[] }> = ({ submissions }) => {
   return (
     <Card className="border-0 shadow-lg shadow-blue-900/5 bg-white/80 backdrop-blur-sm h-full min-w-0">
@@ -180,8 +183,9 @@ const RecentActivity: FC<{ submissions: any[] }> = ({ submissions }) => {
             <div key={r.id} className="flex items-start gap-4">
               <div className={cn(
                 "w-2 h-2 mt-2 rounded-full ring-4 ring-opacity-20 flex-shrink-0",
-                r.status === 'confirmado' ? "bg-emerald-500 ring-emerald-500" :
-                  r.status === 'cancelado' ? "bg-red-500 ring-red-500" : "bg-amber-400 ring-amber-400"
+                r.status === 'atendido' ? "bg-emerald-500 ring-emerald-500" :
+                  r.status === 'atendido_parcialmente' ? "bg-blue-500 ring-blue-500" :
+                    r.status === 'recusado' ? "bg-red-500 ring-red-500" : "bg-amber-400 ring-amber-400"
               )} />
               <div className="flex-1 space-y-1 min-w-0">
                 <p className="text-sm font-medium text-slate-900 leading-none truncate">{r.school}</p>
@@ -229,9 +233,10 @@ const SubmissionsTable: FC<{ submissions: any[] }> = ({ submissions }) => (
                 <TableCell>
                   <span className={cn(
                     "px-2 py-1 rounded-full text-xs font-medium",
-                    s.status === 'confirmado' ? "bg-emerald-100 text-emerald-700" :
-                      s.status === 'cancelado' ? "bg-red-100 text-red-700" :
-                        "bg-amber-100 text-amber-700"
+                    s.status === 'atendido' ? "bg-emerald-100 text-emerald-700" :
+                      s.status === 'atendido_parcialmente' ? "bg-blue-100 text-blue-700" :
+                        s.status === 'recusado' ? "bg-red-100 text-red-700" :
+                          "bg-amber-100 text-amber-700"
                   )}>
                     {s.status || 'Pendente'}
                   </span>
@@ -396,12 +401,13 @@ export default function AdminReports() {
   }, [fetchData]);
 
   const statusData = useMemo(() => {
-    const base = { pendente: 0, confirmado: 0, cancelado: 0 } as Record<string, number>;
+    const base = { pendente: 0, atendido: 0, atendido_parcialmente: 0, recusado: 0 } as Record<string, number>;
     byStatus.forEach(s => { base[s.name] = s.value || 0; });
     return [
       { name: 'pendente', value: base.pendente },
-      { name: 'confirmado', value: base.confirmado },
-      { name: 'cancelado', value: base.cancelado },
+      { name: 'atendido', value: base.atendido },
+      { name: 'atendido_parcialmente', value: base.atendido_parcialmente },
+      { name: 'recusado', value: base.recusado },
     ];
   }, [byStatus]);
 
@@ -467,7 +473,7 @@ export default function AdminReports() {
           helpNeededFilter={helpNeededFilter}
           setHelpNeededFilter={setHelpNeededFilter}
           schools={schools}
-          statusTranslations={{ pendente: 'Pendente', confirmado: 'Confirmado', cancelado: 'Cancelado' }}
+          statusTranslations={{ pendente: 'Pendente', atendido: 'Atendido', atendido_parcialmente: 'Parcial', recusado: 'Recusado' }}
         />
 
         <KpiCards submissions={submissionsRaw} />
@@ -508,17 +514,9 @@ export default function AdminReports() {
                           axisLine={false}
                           tickFormatter={(value) => `${value}`}
                           dx={-10}
-                          domain={[0, 'auto']}
+                          domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax, 1) / 10) * 10]}
                           allowDecimals={false}
-                          tickCount={6} // Helps spread them out, but we want exact 10s? Recharts is tricky with exact steps.
-                          // Let's force ticks to be multiples of 10
-                          ticks={(() => {
-                            const max = Math.max(...timeSeries.map(d => d.count), 1);
-                            const top = Math.ceil(max / 10) * 10;
-                            const ticks = [];
-                            for (let i = 0; i <= top; i += 10) ticks.push(i);
-                            return ticks;
-                          })()}
+                          tickCount={6}
                         />
                         <ChartTooltip
                           content={<ChartTooltipContent indicator="dot" />}
