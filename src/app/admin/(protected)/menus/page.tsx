@@ -179,6 +179,30 @@ const INITIAL_MENUS: Menu[] = [
           { type: "Jantar", description: "Canja ou sopa com bolacha salgada", nutrition: "Kcal: 270" },
         ]
       },
+      {
+        day: "Quarta-feira",
+        meals: [
+          { type: "Desjejum", description: "Bolo + suco ou cuscuz com leite", nutrition: "Kcal: 230" },
+          { type: "Almoço", description: "Pirão de peixe + arroz branco + legumes cozidos", nutrition: "Kcal: 270" },
+          { type: "Jantar", description: "Pão com carne moída + vinagrete", nutrition: "Kcal: 268" },
+        ]
+      },
+      {
+        day: "Quinta-feira",
+        meals: [
+          { type: "Desjejum", description: "Pão com carne moída e fruta", nutrition: "Kcal: 245" },
+          { type: "Almoço", description: "Arroz colorido + frango em cubos ao molho + salada", nutrition: "Kcal: 289" },
+          { type: "Jantar", description: "Tubérculo com fígado acebolado", nutrition: "Kcal: 270" },
+        ]
+      },
+      {
+        day: "Sexta-feira",
+        meals: [
+          { type: "Desjejum", description: "Papa de aveia ou Amido", nutrition: "Kcal: 210" },
+          { type: "Almoço", description: "Feijão + purê + arroz com cenoura + frango guisado", nutrition: "Kcal: 382" },
+          { type: "Jantar", description: "Torta salgada de carne moída + Arroz com cenoura", nutrition: "Kcal: 323" },
+        ]
+      }
     ]
   }
 ];
