@@ -65,25 +65,32 @@ export async function GET(request: Request) {
         const db = getFirestore();
         const schoolsSnapshot = await db.collection('schools').get();
 
-        if (schoolsSnapshot.empty) {
-            // Return defaults if empty
-            return NextResponse.json({
-                users: DEFAULT_SCHOOL_NAMES.map(name => ({
-                    id: normalizeString(name),
-                    name: name,
-                    email: `${normalizeString(name).replace(/\s+/g, '.')}@escola.gov.br`,
-                    responsibleName: "Diretor(a) Responsável",
-                    phone: "81 99999-9999",
-                    address: "Rua das Escolas, S/N",
-                    status: 'active'
-                }))
-            });
-        }
+        // Create a map of existing schools from the database
+        const dbSchoolsMap = new Map();
+        schoolsSnapshot.docs.forEach(doc => {
+            dbSchoolsMap.set(doc.id, { id: doc.id, ...doc.data() });
+        });
 
-        const users = schoolsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        // Merge defaults with database records
+        const users = DEFAULT_SCHOOL_NAMES.map(name => {
+            const id = normalizeString(name);
+            const dbSchool = dbSchoolsMap.get(id);
+
+            if (dbSchool) {
+                return dbSchool;
+            }
+
+            // Return default structure if not in DB
+            return {
+                id,
+                name: name,
+                email: `${normalizeString(name).replace(/\s+/g, '.')}@gmail.com`,
+                responsibleName: "Diretor(a) Responsável",
+                phone: "81 99999-9999",
+                address: "Rua das Escolas, S/N",
+                status: 'active'
+            };
+        });
 
         return NextResponse.json({ users });
     } catch (e) {
