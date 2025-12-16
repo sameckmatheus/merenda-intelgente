@@ -177,13 +177,13 @@ const SchoolDetailsModal = ({ school, isOpen, onClose }: { school: string | null
           </DialogHeader>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+        <div className="flex-1 flex flex-col p-6 overflow-hidden">
           {isLoading ? (
-            <div className="h-64 flex items-center justify-center text-slate-400">Carregando dados da escola...</div>
+            <div className="h-full flex items-center justify-center text-slate-400">Carregando dados da escola...</div>
           ) : (
-            <div className="space-y-8">
+            <div className="flex flex-col gap-6 flex-1 min-h-0">
               {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
                 <Card className="bg-white/60 border-0 shadow-sm">
                   <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
                     <CardTitle className="text-sm font-medium text-slate-500 flex items-center gap-2">
@@ -263,13 +263,13 @@ const SchoolDetailsModal = ({ school, isOpen, onClose }: { school: string | null
               </div>
 
               {/* History Table */}
-              <div>
-                <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <div className="flex flex-col flex-1 min-h-0">
+                <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2 shrink-0">
                   <Clock className="w-4 h-4 text-slate-400" /> Histórico Recente
                 </h3>
                 {/* Scrollable container for table */}
-                <div className="rounded-xl border border-slate-100 overflow-hidden bg-white shadow-sm flex flex-col max-h-[400px]">
-                  <div className="overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+                <div className="rounded-xl border border-slate-100 bg-white shadow-sm flex flex-col flex-1 min-h-0 overflow-hidden">
+                  <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                     <Table>
                       <TableHeader className="bg-slate-50 sticky top-0 z-10">
                         <TableRow>
