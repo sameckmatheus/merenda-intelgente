@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Search, Mail, Phone, MapPin, User, Building2, Send, Edit, Save, Loader2 } from 'lucide-react';
+import { Search, Mail, Phone, MapPin, User, Building2, Send, Edit, Save, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 
@@ -69,21 +69,32 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: { user: SchoolUse
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("details");
   const [isLoading, setIsLoading] = useState(false);
+  const isEditing = !!user;
 
-  // Edit Form State
-  const [formData, setFormData] = useState<Partial<SchoolUser>>({});
+  // Edit Form State - Initialize with empty values if new
+  const [formData, setFormData] = useState<Partial<SchoolUser>>({
+    status: 'active'
+  });
 
   // Email Form State
   const [emailSubject, setEmailSubject] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
 
   useEffect(() => {
-    if (user) {
-      setFormData(user);
-      setEmailSubject(`Atualização - ${user.name}`);
-      setEmailMessage(`Prezados,\n\nGostaríamos de informar que...`);
+    if (isOpen) {
+      if (user) {
+        setFormData(user);
+        setEmailSubject(`Atualização - ${user.name}`);
+        setEmailMessage(`Prezados,\n\nGostaríamos de informar que...`);
+      } else {
+        // Reset for new user
+        setFormData({ status: 'active' });
+        setEmailSubject("");
+        setEmailMessage("");
+        setActiveTab("details");
+      }
     }
-  }, [user]);
+  }, [user, isOpen]);
 
   const handleSaveDetails = async () => {
     setIsLoading(true);
@@ -95,7 +106,7 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: { user: SchoolUse
       });
 
       if (res.ok) {
-        toast({ title: "Sucesso", description: "Dados da escola atualizados." });
+        toast({ title: "Sucesso", description: isEditing ? "Dados da escola atualizados." : "Escola cadastrada com sucesso." });
         onUpdate();
         onClose();
       } else {
@@ -103,6 +114,32 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: { user: SchoolUse
       }
     } catch {
       toast({ title: "Erro", description: "Falha ao salvar dados.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!user) return;
+    if (!confirm("Tem certeza que deseja excluir esta escola?")) return;
+
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: user.id })
+      });
+
+      if (res.ok) {
+        toast({ title: "Sucesso", description: "Escola removida." });
+        onUpdate();
+        onClose();
+      } else {
+        throw new Error("Failed");
+      }
+    } catch {
+      toast({ title: "Erro", description: "Falha ao excluir escola.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -136,7 +173,7 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: { user: SchoolUse
     }
   };
 
-  if (!user) return null;
+  // if (!user) return null; // Removed to allow "New User" mode where user is null but isOpen is true
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -144,7 +181,7 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: { user: SchoolUse
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="w-5 h-5 text-blue-600" />
-            {user.name}
+            {isEditing ? user.name : "Nova Escola"}
           </DialogTitle>
           <DialogDescription>Gerenciamento da conta escolar.</DialogDescription>
         </DialogHeader>
@@ -152,7 +189,7 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: { user: SchoolUse
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full grid grid-cols-2">
             <TabsTrigger value="details">Informações da Conta</TabsTrigger>
-            <TabsTrigger value="email">Enviar Notificação</TabsTrigger>
+            {isEditing && <TabsTrigger value="email">Enviar Notificação</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="details" className="space-y-4 py-4">
@@ -249,19 +286,29 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: { user: SchoolUse
           </TabsContent>
         </Tabs>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>Cancelar</Button>
-          {activeTab === 'details' ? (
-            <Button onClick={handleSaveDetails} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
-              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-              Salvar Alterações
-            </Button>
-          ) : (
-            <Button onClick={handleSendEmail} disabled={isLoading || !emailSubject || !emailMessage}>
-              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-              Enviar E-mail
-            </Button>
-          )}
+        <DialogFooter className="flex justify-between items-center w-full sm:justify-between">
+          <div className="flex gap-2">
+            {isEditing && (
+              <Button variant="destructive" onClick={handleDelete} disabled={isLoading} className="bg-red-50 text-red-600 hover:bg-red-100 border-none shadow-none">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Excluir
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose} disabled={isLoading}>Cancelar</Button>
+            {activeTab === 'details' ? (
+              <Button onClick={handleSaveDetails} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
+                {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                Salvar Alterações
+              </Button>
+            ) : (
+              <Button onClick={handleSendEmail} disabled={isLoading || !emailSubject || !emailMessage}>
+                {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                Enviar E-mail
+              </Button>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -273,6 +320,12 @@ export default function AdminUsers() {
   const [users, setUsers] = useState<SchoolUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<SchoolUser | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleOpenModal = (user: SchoolUser | null) => {
+    setSelectedUser(user);
+    setIsModalOpen(true);
+  };
 
   const fetchUsers = () => {
     setIsLoading(true);
@@ -300,14 +353,20 @@ export default function AdminUsers() {
       description="Gerencie as contas das escolas e canais de comunicação."
     >
       <div className="space-y-6">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            placeholder="Buscar usuário ou escola..."
-            className="pl-9 bg-white border-slate-200 shadow-sm focus:ring-blue-500"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+          <div className="relative max-w-md w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Buscar usuário ou escola..."
+              className="pl-9 bg-white border-slate-200 shadow-sm focus:ring-blue-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Button onClick={() => handleOpenModal(null)} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Plus className="w-4 h-4 mr-2" />
+            Cadastrar Escola
+          </Button>
         </div>
 
         {isLoading ? (
@@ -318,7 +377,7 @@ export default function AdminUsers() {
               <UserCard
                 key={user.id}
                 user={user}
-                onClick={() => setSelectedUser(user)}
+                onClick={() => handleOpenModal(user)}
               />
             ))}
           </div>
@@ -332,8 +391,8 @@ export default function AdminUsers() {
 
         <UserDetailsModal
           user={selectedUser}
-          isOpen={!!selectedUser}
-          onClose={() => setSelectedUser(null)}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
           onUpdate={fetchUsers}
         />
       </div>

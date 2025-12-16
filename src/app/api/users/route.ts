@@ -105,9 +105,14 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
-        const { id, ...data } = body;
+        let { id, ...data } = body;
 
-        if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
+        // Auto-generate ID if missing
+        if (!id && data.name) {
+            id = normalizeString(data.name);
+        }
+
+        if (!id) return NextResponse.json({ error: 'Missing ID or Name' }, { status: 400 });
 
         if (!isFirebaseAdminInitialized() && process.env.NODE_ENV === 'development') {
             // Update in-memory mock DB using global store
@@ -127,6 +132,31 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true });
     } catch (e) {
         console.error('POST /api/users error', e);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: Request) {
+    const authed = await requireAuth();
+    if (!authed) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    try {
+        const body = await request.json();
+        const { id } = body;
+
+        if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
+
+        if (!isFirebaseAdminInitialized() && process.env.NODE_ENV === 'development') {
+            globalStore[GLOBAL_KEY] = globalStore[GLOBAL_KEY].filter((user: any) => user.id !== id);
+            return NextResponse.json({ success: true });
+        }
+
+        const db = getFirestore();
+        await db.collection('schools').doc(id).delete();
+
+        return NextResponse.json({ success: true });
+    } catch (e) {
+        console.error('DELETE /api/users error', e);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
