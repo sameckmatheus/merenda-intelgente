@@ -189,7 +189,7 @@ export default function AdminSettings() {
 
             </CardContent>
             <CardFooter className="border-t bg-slate-50 px-6 py-4">
-              <Button onClick={handleSystemSave} disabled={isSaving || isLoading} className="ml-auto bg-blue-600 hover:bg-blue-700">
+              <Button onClick={handleSystemSave} disabled={isSaving || isLoading} className="ml-auto bg-blue-600 hover:bg-blue-700 text-white">
                 {isSaving ? "Salvando..." : <><Save className="w-4 h-4 mr-2" /> Salvar Alterações</>}
               </Button>
             </CardFooter>
