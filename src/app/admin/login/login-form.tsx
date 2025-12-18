@@ -78,6 +78,7 @@ export default function LoginForm() {
         });
       }
     } catch (error: any) {
+      console.error('Login error details:', error);
       let errorMessage = 'Não foi possível conectar ao servidor.';
       if (error.code) {
         switch (error.code) {
@@ -90,8 +91,10 @@ export default function LoginForm() {
             errorMessage = 'O formato do e-mail é inválido.';
             break;
           default:
-            errorMessage = 'Ocorreu um erro durante o login.';
+            errorMessage = `Erro (${error.code}): ${error.message}`;
         }
+      } else {
+        errorMessage = `Erro inesperado: ${error.message || 'Consulte o console'}`;
       }
       toast({
         variant: 'destructive',
