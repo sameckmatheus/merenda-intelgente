@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Timestamp, collection, deleteDoc, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
-import { LogOut, LoaderCircle, FileX2, Trash2, Users, HelpCircle, ShoppingBasket, FileDown, Building, MessageSquare, PackageCheck, Utensils, CalendarIcon, GraduationCap, TrendingUp, TrendingDown, FileText } from "lucide-react";
+import { LogOut, LoaderCircle, FileX2, Trash2, Users, HelpCircle, ShoppingBasket, FileDown, Building, MessageSquare, PackageCheck, Utensils, CalendarIcon, GraduationCap, TrendingUp, TrendingDown, FileText, Mail, MessageCircle } from "lucide-react";
 
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -65,8 +65,21 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [schoolDetails, setSchoolDetails] = useState<{ contacts?: { email: string, whatsapp: string } } | null>(null);
   const [filterType, setFilterType] = useState<'day' | 'week' | 'month'>('day');
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedSubmission?.school) {
+      fetch(`/api/schools/settings?school=${encodeURIComponent(selectedSubmission.school)}`)
+        .then(res => res.json())
+        .then(data => setSchoolDetails(data.settings || null))
+        .catch(err => console.error("Failed to fetch school settings", err));
+    } else {
+      setSchoolDetails(null);
+    }
+  }, [selectedSubmission]);
+
 
   useEffect(() => {
     const fetchSubmissions = async () => {
@@ -176,6 +189,12 @@ export default function AdminDashboard() {
       });
       if (!res.ok) throw new Error('Falha ao salvar');
       setSubmissions(prev => prev.map(s => s.id === submissionId ? { ...s, status: newStatus } : s));
+
+      // Also update selectedSubmission if it's currently open
+      if (selectedSubmission && selectedSubmission.id === submissionId) {
+        setSelectedSubmission(prev => prev ? { ...prev, status: newStatus } : null);
+      }
+
       toast({ title: 'Status atualizado', description: 'O status foi salvo com sucesso.' });
     } catch (error) {
       console.error('Erro ao atualizar status', error);
@@ -263,27 +282,7 @@ export default function AdminDashboard() {
     </div>
   );
 
-  const KpiCard = ({ title, value, subtitle, icon: Icon, colorClass, trend }: { title: string, value: number, subtitle: string, icon: any, colorClass: string, trend?: 'up' | 'down' | 'neutral' }) => (
-    <Card className="relative overflow-hidden border-0 shadow-lg shadow-blue-900/5 bg-white transition-all hover:-translate-y-1 hover:shadow-xl">
-      <div className={cn("absolute top-0 right-0 w-32 h-32 bg-gradient-to-br opacity-10 rounded-full blur-3xl -mr-16 -mt-16", colorClass)}></div>
-      <CardContent className="p-6">
-        <div className="flex justify-between items-start">
-          <div>
-            <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
-            <h3 className="text-3xl font-bold text-slate-900">{value}</h3>
-          </div>
-          <div className={cn("p-3 rounded-xl", colorClass.replace('from-', 'bg-').split(' ')[0])}>
-            <Icon className="w-6 h-6 text-white" />
-          </div>
-        </div>
-        <div className="mt-4 flex items-center gap-2">
-          {trend === 'up' && <TrendingUp className="w-4 h-4 text-emerald-500" />}
-          {trend === 'down' && <TrendingDown className="w-4 h-4 text-red-500" />}
-          <p className="text-xs font-medium text-slate-400">{subtitle}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  /* Removed internal KpiCard component to match Reports style directly in KpiCards */
 
   const KpiCards = ({ submissions }: { submissions: Submission[] }) => {
     const totalRecords = submissions.length;
@@ -291,31 +290,39 @@ export default function AdminDashboard() {
     const totalPurchased = submissions.filter(s => s.itemsPurchased).length;
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <KpiCard
-          title="Total de Registros"
-          value={totalRecords}
-          subtitle="No período selecionado"
-          icon={FileText} // Changed from Users to FileText to match reports or keep Users if preferred? User said 'troque os cards', implying exact copy. Reports uses FileText.
-          colorClass="from-blue-600 to-indigo-600"
-          trend="up"
-        />
-        <KpiCard
-          title="Pedidos de Ajuda"
-          value={totalHelp}
-          subtitle="Solicitações de itens"
-          icon={HelpCircle}
-          colorClass="from-amber-500 to-orange-500"
-          trend="neutral"
-        />
-        <KpiCard
-          title="Compras Realizadas"
-          value={totalPurchased}
-          subtitle="Compras emergenciais"
-          icon={ShoppingBasket} // Reports uses ShoppingCart, Dashboard uses ShoppingBasket. I will use ShoppingCart to match reports exactly if possible, or keep ShoppingBasket if imported. Dashboard imports ShoppingBasket, Reports imports ShoppingCart. I should check imports.
-          colorClass="from-emerald-500 to-teal-500"
-          trend="down"
-        />
+      <div className="grid gap-6 md:grid-cols-3 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Registros</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalRecords}</div>
+            <p className="text-xs text-muted-foreground">No período selecionado</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pedidos de Ajuda</CardTitle>
+            <HelpCircle className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalHelp}</div>
+            <p className="text-xs text-muted-foreground">Solicitações de itens</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Compras Realizadas</CardTitle>
+            <ShoppingBasket className="h-4 w-4 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalPurchased}</div>
+            <p className="text-xs text-muted-foreground">Compras emergenciais</p>
+          </CardContent>
+        </Card>
       </div>
     );
   };
@@ -462,7 +469,38 @@ export default function AdminDashboard() {
             </div>
 
             <ScrollArea className="flex-1 w-full p-6">
-              <div className="space-y-4">
+              <div className="space-y-6">
+
+                {/* Contact Actions */}
+                {schoolDetails && schoolDetails.contacts && (
+                  <div className="flex gap-3 mb-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 gap-2"
+                      onClick={() => {
+                        const msg = `Olá, referente ao registro de merenda do dia ${formatDate(selectedSubmission.date)} (${selectedSubmission.shift}) da escola ${selectedSubmission.school}. Status atual: ${statusTranslations[selectedSubmission.status || 'pendente']}.`;
+                        const phone = schoolDetails.contacts?.whatsapp?.replace(/\D/g, '') || '';
+                        if (phone) window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+                      }}
+                      disabled={!schoolDetails.contacts.whatsapp}
+                    >
+                      <MessageCircle className="w-4 h-4" /> WhatsApp
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700 gap-2"
+                      onClick={() => {
+                        const subject = `Registro Merenda - ${selectedSubmission.school} - ${formatDate(selectedSubmission.date)}`;
+                        const body = `Olá,\n\nReferente ao registro do dia ${formatDate(selectedSubmission.date)} (${selectedSubmission.shift}).\nStatus atual: ${statusTranslations[selectedSubmission.status || 'pendente']}.\n\nAtenciosamente,\nEquipe Merenda Inteligente`;
+                        window.open(`mailto:${schoolDetails.contacts?.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+                      }}
+                      disabled={!schoolDetails.contacts.email}
+                    >
+                      <Mail className="w-4 h-4" /> Email
+                    </Button>
+                  </div>
+                )}
+
                 <Card className="bg-slate-50/50">
                   <CardContent className="p-4 grid grid-cols-2 gap-4">
                     <DetailItem

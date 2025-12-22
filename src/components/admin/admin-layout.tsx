@@ -44,7 +44,7 @@ export function AdminLayout({
           <div className="flex items-center gap-4">
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menu">
+                <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Abrir menu">
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
@@ -75,12 +75,12 @@ export function AdminLayout({
               </SheetContent>
             </Sheet>
 
-            <Link href="/admin" className="hidden md:flex items-center gap-2">
+            <Link href="/admin" className="hidden lg:flex items-center gap-2">
               <span className="font-headline font-bold text-xl text-blue-950">MenuPlanner</span>
             </Link>
           </div>
 
-          <nav className="hidden md:flex items-center gap-1 absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          <nav className="hidden lg:flex items-center gap-1">
             {menuItems.map((item) => {
               const isActive = pathname === item.href;
               return (

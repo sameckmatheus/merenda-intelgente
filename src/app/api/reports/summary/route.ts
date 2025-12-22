@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
       atendido_parcialmente: 0,
       recusado: 0
     };
+    const missingItemsCount: Record<string, number> = {};
 
     // Prepare date range filter
     let startDate = 0;
@@ -87,6 +88,16 @@ export async function GET(request: NextRequest) {
       } else {
         byStatus[fStatus] = (byStatus[fStatus] || 0) + 1;
       }
+
+      // Missing Items Aggregation
+      if (data.missingItems && typeof data.missingItems === 'string') {
+        // Assuming simple string or comma separated
+        const items = data.missingItems.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
+        items.forEach((item: string) => {
+          const key = item.toLowerCase(); // Normalize
+          missingItemsCount[key] = (missingItemsCount[key] || 0) + 1;
+        });
+      }
     });
 
     const bySchoolArray = Object.entries(bySchool)
@@ -96,9 +107,15 @@ export async function GET(request: NextRequest) {
     const byStatusArray = Object.entries(byStatus)
       .map(([name, value]) => ({ name, value }));
 
+    const missingItemsArray = Object.entries(missingItemsCount)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10); // Top 10
+
     return NextResponse.json({
       bySchool: bySchoolArray,
-      byStatus: byStatusArray
+      byStatus: byStatusArray,
+      missingItems: missingItemsArray
     });
 
   } catch (error: any) {
@@ -107,6 +124,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       bySchool: [],
       byStatus: [],
+      missingItems: [],
       debug_error: String(error)
     }, { status: 200 });
   }

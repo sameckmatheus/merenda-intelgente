@@ -73,10 +73,10 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
-        const { schoolName, counts } = body;
+        const { schoolName, counts, contacts } = body;
 
-        if (!schoolName || !counts) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        if (!schoolName) {
+            return NextResponse.json({ error: 'Missing required field: schoolName' }, { status: 400 });
         }
 
         if (!isFirebaseAdminInitialized() && process.env.NODE_ENV === 'development') {
@@ -87,12 +87,16 @@ export async function POST(request: Request) {
         const db = getFirestore();
         const docId = normalizeString(schoolName);
 
-        await db.collection('schools').doc(docId).set({
+        const updateData: any = {
             name: schoolName, // Store original name for display if needed later
-            counts,
             updatedAt: new Date(),
             updatedBy: authed.uid
-        }, { merge: true });
+        };
+
+        if (counts) updateData.counts = counts;
+        if (contacts) updateData.contacts = contacts;
+
+        await db.collection('schools').doc(docId).set(updateData, { merge: true });
 
         return NextResponse.json({ success: true }, { status: 200 });
     } catch (e) {
