@@ -1,114 +1,77 @@
 "use client"
 
 import { useMemo, useState, useEffect, useRef, FC, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { Filters } from "@/components/admin/filters";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, FileText, ShoppingCart, HelpCircle, TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { Download, FileText, ShoppingCart, HelpCircle, TrendingUp, TrendingDown, Activity, Calendar as CalendarIcon, AlertTriangle, BarChart, ShoppingBasket } from 'lucide-react';
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, AreaChart, Area } from "recharts";
+import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, AreaChart, Area, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 const schools = [
-  "ANEXO MARCOS FREIRE",
-  "BARBAPAPA",
-  "CARLOS AYRES",
-  "DILMA",
-  "FRANCELINA",
-  "GERCINA ALVES",
-  "JOÃO BENTO",
-  "MARCOS FREIRE",
-  "MARIA JOSÉ",
-  "MARIA OLIVEIRA",
-  "MUNDO DA CRIANÇA",
-  "MÃE BELA",
-  "OTACÍLIA",
-  "SABINO",
-  "ZÉLIA",
-  "ZULEIDE",
+  "ANEXO MARCOS FREIRE", "BARBAPAPA", "CARLOS AYRES", "DILMA", "FRANCELINA", "GERCINA ALVES",
+  "JOÃO BENTO", "MARCOS FREIRE", "MARIA JOSÉ", "MARIA OLIVEIRA", "MUNDO DA CRIANÇA",
+  "MÃE BELA", "OTACÍLIA", "SABINO", "ZÉLIA", "ZULEIDE",
 ];
 
-// Cores vibrantes
-const COLORS = [
-  '#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b',
-  '#06b6d4', '#6366f1', '#f43f5e', '#84cc16', '#14b8a6'
-];
+const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#06b6d4', '#6366f1', '#f43f5e', '#84cc16', '#14b8a6'];
 
 const STATUS_COLORS = {
-  pendente: '#fbbf24', // Amber 400
-  atendido: '#10b981', // Emerald 500
-  atendido_parcialmente: '#3b82f6', // Blue 500
-  recusado: '#ef4444', // Red 500
+  pendente: '#fbbf24', atendido: '#10b981', atendido_parcialmente: '#3b82f6', recusado: '#ef4444',
 } as const;
 
 type Status = keyof typeof STATUS_COLORS;
 
-const KpiCard = ({ title, value, subtitle, icon: Icon, colorClass, trend }: { title: string, value: number, subtitle: string, icon: any, colorClass: string, trend?: 'up' | 'down' | 'neutral' }) => (
-  <Card className="relative overflow-hidden border-0 shadow-lg shadow-blue-900/5 bg-white transition-all hover:-translate-y-1 hover:shadow-xl">
-    <div className={cn("absolute top-0 right-0 w-32 h-32 bg-gradient-to-br opacity-10 rounded-full blur-3xl -mr-16 -mt-16", colorClass)}></div>
-    <CardContent className="p-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
-          <h3 className="text-3xl font-bold text-slate-900">{value}</h3>
-        </div>
-        <div className={cn("p-3 rounded-xl", colorClass.replace('from-', 'bg-').split(' ')[0])}>
-          <Icon className="w-6 h-6 text-white" />
-        </div>
-      </div>
-      <div className="mt-4 flex items-center gap-2">
-        {trend === 'up' && <TrendingUp className="w-4 h-4 text-emerald-500" />}
-        {trend === 'down' && <TrendingDown className="w-4 h-4 text-red-500" />}
-        <p className="text-xs font-medium text-slate-400">{subtitle}</p>
-      </div>
-    </CardContent>
-  </Card>
-);
-
+// KpiCards with Clean Style (Shadcn based, no gradients)
 const KpiCards: FC<{ submissions: any[] }> = ({ submissions }) => {
   const totalRecords = submissions.length;
   const totalHelp = submissions.filter(s => s.helpNeeded).length;
   const totalPurchased = submissions.filter(s => s.itemsPurchased).length;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <KpiCard
-        title="Total de Registros"
-        value={totalRecords}
-        subtitle="No período selecionado"
-        icon={FileText}
-        colorClass="from-blue-600 to-indigo-600"
-        trend="up"
-      />
-      <KpiCard
-        title="Pedidos de Ajuda"
-        value={totalHelp}
-        subtitle="Solicitações de itens"
-        icon={HelpCircle}
-        colorClass="from-amber-500 to-orange-500"
-        trend="neutral"
-      />
-      <KpiCard
-        title="Compras Realizadas"
-        value={totalPurchased}
-        subtitle="Compras emergenciais"
-        icon={ShoppingCart}
-        colorClass="from-emerald-500 to-teal-500"
-        trend="down"
-      />
+    <div className="grid gap-6 md:grid-cols-3 mb-8">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total de Registros</CardTitle>
+          <FileText className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{totalRecords}</div>
+          <p className="text-xs text-muted-foreground">No período selecionado</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Pedidos de Ajuda</CardTitle>
+          <HelpCircle className="h-4 w-4 text-amber-500" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{totalHelp}</div>
+          <p className="text-xs text-muted-foreground">Solicitações de itens</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Compras Realizadas</CardTitle>
+          <ShoppingBasket className="h-4 w-4 text-emerald-500" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{totalPurchased}</div>
+          <p className="text-xs text-muted-foreground">Compras emergenciais</p>
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
 const StatusDistributionChart: FC<{ data: { name: string, value: number }[], isLoading: boolean }> = ({ data, isLoading }) => {
-  const statusWithPercent = useMemo(() => {
-    const total = data.reduce((s, v) => s + (v.value || 0), 0) || 1;
-    return data.map(s => ({ ...s, percent: Math.round(((s.value || 0) / total) * 100) }));
-  }, [data]);
-
   return (
     <Card className="border-0 shadow-lg shadow-blue-900/5 bg-white/80 backdrop-blur-sm min-w-0">
       <CardHeader>
@@ -142,9 +105,7 @@ const StatusDistributionChart: FC<{ data: { name: string, value: number }[], isL
                     <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as Status] || '#cbd5e1'} strokeWidth={0} />
                   ))}
                 </Pie>
-                <ChartTooltip
-                  content={<ChartTooltipContent indicator="dot" />}
-                />
+                <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
                 <ChartLegend
                   content={({ payload }) => (
                     <div className="flex justify-center gap-4 mt-4 flex-wrap">
@@ -274,193 +235,135 @@ const getDateRange = (date: Date, filterType: 'day' | 'week' | 'month'): { start
 };
 
 export default function AdminReports() {
+  const searchParams = useSearchParams();
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [filterType, setFilterType] = useState<'day' | 'week' | 'month'>('day');
-  const [selectedSchool, setSelectedSchool] = useState<string>('all');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [submissions, setSubmissions] = useState<any[]>([]);
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all');
+  const [selectedSchool, setSelectedSchool] = useState<string>(searchParams.get('school') || 'all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [helpNeededFilter, setHelpNeededFilter] = useState<'all' | 'yes' | 'no'>('all');
 
-  const [bySchool, setBySchool] = useState<{ name: string; count: number }[]>([]);
-  const [byStatus, setByStatus] = useState<{ name: string; value: number }[]>([]);
+  const [summary, setSummary] = useState<{ bySchool: any[], byStatus: any[], missingItems: any[] }>({ bySchool: [], byStatus: [], missingItems: [] });
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Reuse existing raw submissions state logic if needed, but for now we focus on summary
   const [submissionsRaw, setSubmissionsRaw] = useState<any[]>([]);
-  const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('line');
-  const [metricType, setMetricType] = useState<'total' | 'confirmed'>('total');
+
+  // Charts state
   const [timeSeries, setTimeSeries] = useState<Array<{ date: string; label: string; count: number;[k: string]: any }>>([]);
   const [seriesKeys, setSeriesKeys] = useState<string[]>([]);
   const [seriesColors, setSeriesColors] = useState<Record<string, string>>({});
   const [enabledSeries, setEnabledSeries] = useState<Record<string, boolean>>({});
 
-  const chartsRef = useRef<HTMLDivElement | null>(null);
+  const statusTranslations = { pendente: 'Pendente', atendido: 'Atendido', atendido_parcialmente: 'Parcial', recusado: 'Recusado' };
 
-  const fetchData = useCallback(async () => {
+  // Fetch logic
+  const fetchSummary = useCallback(async () => {
     setIsLoading(true);
+    const params = new URLSearchParams();
+    if (date) {
+      const r = getDateRange(date, filterType);
+      params.set('start', r.start.toString());
+      params.set('end', r.end.toString());
+    }
+    if (selectedSchool !== 'all') params.set('school', selectedSchool);
+    if (selectedStatus !== 'all') params.set('status', selectedStatus);
+    if (helpNeededFilter !== 'all') params.set('helpNeeded', helpNeededFilter);
+
     try {
-      const params = new URLSearchParams();
-      let start: number | null = null;
-      let end: number | null = null;
-
-      if (date) {
-        const range = getDateRange(date, filterType);
-        start = range.start;
-        end = range.end;
-      }
-
-      if (start !== null && end !== null) {
-        params.set('start', String(start));
-        params.set('end', String(end));
-      }
-      if (selectedSchool && selectedSchool !== 'all') params.set('school', selectedSchool);
-      if (selectedStatusFilter && selectedStatusFilter !== 'all') params.set('status', selectedStatusFilter);
-      if (helpNeededFilter && helpNeededFilter !== 'all') params.set('helpNeeded', helpNeededFilter);
-
-      const [summaryRes, rawRes] = await Promise.all([
-        fetch(`/api/reports/summary?${params.toString()}`, { cache: 'no-store' }),
-        fetch(`/api/submissions?${params.toString()}`, { cache: 'no-store' })
+      const [sumRes, rawRes] = await Promise.all([
+        fetch(`/api/reports/summary?${params.toString()}`),
+        fetch(`/api/submissions?${params.toString()}`)
       ]);
 
-      if (!summaryRes.ok) throw new Error('Falha ao buscar resumo');
-      if (!rawRes.ok) throw new Error('Falha ao buscar submissões brutas');
+      const sumData = await sumRes.json();
+      const rawData = await rawRes.json();
 
-      const summaryJson = await summaryRes.json();
-      const rawJson = await rawRes.json();
+      setSummary({
+        bySchool: sumData.bySchool || [],
+        byStatus: sumData.byStatus || [],
+        missingItems: sumData.missingItems || []
+      });
+      setSubmissionsRaw(rawData.submissions || []);
 
-      setBySchool(summaryJson.bySchool || []);
-      setByStatus(summaryJson.byStatus || []);
-
-      const raws = rawJson.submissions || [];
-      setSubmissionsRaw(raws);
-      setSubmissions(raws);
-
+      // Prepare Time Series
+      const raws = rawData.submissions || [];
       const countsByDayAndSchool: Record<string, Record<string, number>> = {};
       const totalBySchool: Record<string, number> = {};
       raws.forEach((r: any) => {
         const ts = typeof r.date === 'number' ? new Date(r.date) : new Date(r.date?.toMillis?.() || r.date || Date.now());
         const key = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}-${String(ts.getDate()).padStart(2, '0')}`;
         const school = r.school || 'Sem Escola';
-        const isConfirmed = r.status === 'confirmado';
-
-        if (metricType === 'confirmed' && !isConfirmed) return;
-
         countsByDayAndSchool[key] = countsByDayAndSchool[key] || {};
         countsByDayAndSchool[key][school] = (countsByDayAndSchool[key][school] || 0) + 1;
         totalBySchool[school] = (totalBySchool[school] || 0) + 1;
       });
 
-      const seriesList = Object.entries(totalBySchool)
-        .sort((a, b) => b[1] - a[1])
-        .map(([name]) => name);
+      const seriesList = Object.entries(totalBySchool).sort((a, b) => b[1] - a[1]).map(([n]) => n);
       const colorMap: Record<string, string> = {};
       seriesList.forEach((k, idx) => { colorMap[k] = COLORS[idx % COLORS.length]; });
 
-      let series: Array<{ date: string; label: string; count: number;[k: string]: any }> = [];
-      const today = new Date();
-      const effectiveStart = start !== null ? start : new Date(today.setDate(today.getDate() - 6)).setHours(0, 0, 0, 0);
-      const effectiveEnd = end !== null ? end : new Date().setHours(23, 59, 59, 999);
-
-      for (let t = effectiveStart; t <= effectiveEnd; t += 24 * 60 * 60 * 1000) {
-        const d = new Date(t);
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        const dayEntry = countsByDayAndSchool[key] || {};
-        const totalForDay = Object.values(dayEntry).reduce((s, v) => s + (v || 0), 0);
-        const row: any = {
-          date: key,
-          label: `${d.getDate()}/${String(d.getMonth() + 1).padStart(2, '0')}`,
-          count: totalForDay,
-        };
-        seriesList.forEach((sKey) => {
-          row[sKey] = dayEntry[sKey] || 0;
+      let series: any[] = [];
+      const sortedKeys = Object.keys(countsByDayAndSchool).sort();
+      if (sortedKeys.length > 0) {
+        sortedKeys.forEach(key => {
+          const dayEntry = countsByDayAndSchool[key];
+          const parts = key.split('-');
+          const label = `${parts[2]}/${parts[1]}`;
+          const row: any = { date: key, label, count: Object.values(dayEntry).reduce((a, b) => a + b, 0) };
+          seriesList.forEach(k => row[k] = dayEntry[k] || 0);
+          series.push(row);
         });
-        series.push(row);
       }
 
       setTimeSeries(series);
       setSeriesKeys(seriesList);
       setSeriesColors(colorMap);
-      setEnabledSeries((prev) => {
-        const next: Record<string, boolean> = { ...prev };
+      setEnabledSeries(prev => {
+        const next = { ...prev };
         seriesList.forEach(k => { if (next[k] === undefined) next[k] = true; });
-        Object.keys(next).forEach(k => { if (!seriesList.includes(k)) delete next[k]; });
         return next;
       });
 
-    } catch (e) {
-      console.error('Erro ao buscar dados dos relatórios', e);
-      setSubmissions([]);
-      setSubmissionsRaw([]);
-      setBySchool([]);
-      setByStatus([]);
+    } catch (err) {
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
-  }, [date, filterType, selectedSchool, selectedStatusFilter, helpNeededFilter, metricType]);
+  }, [date, filterType, selectedSchool, selectedStatus, helpNeededFilter]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchSummary();
+  }, [fetchSummary]);
 
-  const statusData = useMemo(() => {
-    const base = { pendente: 0, atendido: 0, atendido_parcialmente: 0, recusado: 0 } as Record<string, number>;
-    byStatus.forEach(s => { base[s.name] = s.value || 0; });
-    return [
-      { name: 'pendente', value: base.pendente },
-      { name: 'atendido', value: base.atendido },
-      { name: 'atendido_parcialmente', value: base.atendido_parcialmente },
-      { name: 'recusado', value: base.recusado },
-    ];
-  }, [byStatus]);
-
-  const handleExportCSV = async () => {
-    try {
-      const params = new URLSearchParams();
-      if (date) {
-        const { start, end } = getDateRange(date, filterType);
-        params.set('start', String(start));
-        params.set('end', String(end));
-      }
-      if (selectedSchool && selectedSchool !== 'all') params.set('school', selectedSchool);
-      if (selectedStatusFilter && selectedStatusFilter !== 'all') params.set('status', selectedStatusFilter);
-      if (helpNeededFilter && helpNeededFilter !== 'all') params.set('helpNeeded', helpNeededFilter);
-
-      const res = await fetch(`/api/reports/csv?${params.toString()}`);
-      if (!res.ok) throw new Error('Erro ao gerar CSV');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'relatorio-menuplanner.csv';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error('Erro ao exportar CSV', e);
-      alert('Falha ao exportar CSV');
-    }
+  const downloadCSV = () => {
+    const headers = ["Escola", "Registros"];
+    const rows = summary.bySchool.map(item => [item.name, item.count]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "relatorio_escolas.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const exportActions = (
-    <div className="flex gap-2">
-      <Button
-        variant="default"
-        size="sm"
-        onClick={handleExportCSV}
-        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-600/20 rounded-xl transition-all hover:scale-105 active:scale-95"
-      >
-        <FileText className="mr-2 h-4 w-4" /> Exportar CSV
-      </Button>
-    </div>
-  );
+  const totalSubmissions = summary.bySchool.reduce((acc, curr) => acc + curr.count, 0);
+
+  // Helper for Status Chart
+  const statusChartData = summary.byStatus.map(s => ({ name: s.name, value: s.value }));
 
   return (
     <AdminLayout
-      title="Central de Relatórios"
-      description="Análise detalhada do desempenho e registros da merenda escolar."
-      actions={exportActions}
+      title="Relatórios"
+      description="Visão geral e indicadores de performance."
+      actions={
+        <Button onClick={downloadCSV} variant="outline" size="sm">
+          <Download className="mr-2 h-4 w-4" /> Exportar CSV
+        </Button>
+      }
     >
-      <div className="space-y-8" ref={chartsRef}>
-
+      <div className="space-y-6">
         <Filters
           date={date}
           setDate={setDate}
@@ -468,15 +371,60 @@ export default function AdminReports() {
           setFilterType={setFilterType}
           selectedSchool={selectedSchool}
           setSelectedSchool={setSelectedSchool}
-          selectedStatus={selectedStatusFilter}
-          setSelectedStatus={setSelectedStatusFilter}
+          selectedStatus={selectedStatus}
+          setSelectedStatus={setSelectedStatus}
           helpNeededFilter={helpNeededFilter}
           setHelpNeededFilter={setHelpNeededFilter}
           schools={schools}
-          statusTranslations={{ pendente: 'Pendente', atendido: 'Atendido', atendido_parcialmente: 'Parcial', recusado: 'Recusado' }}
+          statusTranslations={statusTranslations}
         />
 
+        {/* Use simplified KpiCards component */}
         <KpiCards submissions={submissionsRaw} />
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+          <Card className="col-span-4">
+            <CardHeader>
+              <CardTitle>Registros por Escola</CardTitle>
+              <CardDescription>Escolas com maior número de registros.</CardDescription>
+            </CardHeader>
+            <CardContent className="pl-2">
+              <ResponsiveContainer width="100%" height={350}>
+                <RechartsBarChart data={summary.bySchool.slice(0, 10)}>
+                  <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => val.slice(0, 10)} />
+                  <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+                  <Tooltip cursor={{ fill: 'transparent' }} />
+                  <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </RechartsBarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="col-span-3">
+            <CardHeader>
+              <CardTitle>Itens Mais Faltantes</CardTitle>
+              <CardDescription>Top itens reportados como falta.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {summary.missingItems.slice(0, 5).map((item, i) => (
+                  <div key={i} className="flex items-center">
+                    <div className="w-full flex-1 space-y-1">
+                      <p className="text-sm font-medium leading-none capitalize">{item.name}</p>
+                      <div className="w-full bg-slate-100 rounded-full h-2">
+                        <div className="bg-red-500 h-2 rounded-full" style={{ width: `${Math.min(100, (item.count / (totalSubmissions || 1)) * 100)}%` }}></div>
+                      </div>
+                    </div>
+                    <div className="ml-4 font-bold text-slate-700">{item.count}</div>
+                  </div>
+                ))}
+                {summary.missingItems.length === 0 && (
+                  <p className="text-sm text-slate-500 text-center py-8">Nenhum item em falta reportado.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           <Card className="col-span-1 xl:col-span-2 border-0 shadow-lg shadow-blue-900/5 bg-white/80 backdrop-blur-sm flex flex-col min-w-0">
@@ -491,59 +439,56 @@ export default function AdminReports() {
                 <div className="h-full flex items-center justify-center text-slate-400">Carregando dados...</div>
               ) : (
                 <div className="h-full w-full">
-
-                  <div className="h-full w-full">
-                    <ChartContainer
-                      config={Object.fromEntries(seriesKeys.map((k) => [k, { label: k, color: seriesColors[k] }]))}
-                      className="h-full w-full"
-                    >
-                      <LineChart data={timeSeries} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                        <XAxis
-                          dataKey="label"
-                          stroke="#64748b"
-                          fontSize={12}
-                          tickLine={false}
-                          axisLine={false}
-                          dy={10}
+                  <ChartContainer
+                    config={Object.fromEntries(seriesKeys.map((k) => [k, { label: k, color: seriesColors[k] }]))}
+                    className="h-full w-full"
+                  >
+                    <LineChart data={timeSeries} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis
+                        dataKey="label"
+                        stroke="#64748b"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        dy={10}
+                      />
+                      <YAxis
+                        stroke="#64748b"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `${value}`}
+                        dx={-10}
+                        domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax, 1) / 10) * 10]}
+                        allowDecimals={false}
+                        tickCount={6}
+                      />
+                      <ChartTooltip
+                        content={<ChartTooltipContent indicator="dot" />}
+                        cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }}
+                      />
+                      {seriesKeys.filter(k => enabledSeries[k]).map((k) => (
+                        <Line
+                          key={k}
+                          type="monotone"
+                          dataKey={k}
+                          stroke={seriesColors[k]}
+                          strokeWidth={3}
+                          dot={{ r: 4, fill: seriesColors[k], strokeWidth: 0 }}
+                          activeDot={{ r: 6 }}
                         />
-                        <YAxis
-                          stroke="#64748b"
-                          fontSize={12}
-                          tickLine={false}
-                          axisLine={false}
-                          tickFormatter={(value) => `${value}`}
-                          dx={-10}
-                          domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax, 1) / 10) * 10]}
-                          allowDecimals={false}
-                          tickCount={6}
-                        />
-                        <ChartTooltip
-                          content={<ChartTooltipContent indicator="dot" />}
-                          cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }}
-                        />
-                        {seriesKeys.filter(k => enabledSeries[k]).map((k) => (
-                          <Line
-                            key={k}
-                            type="monotone"
-                            dataKey={k}
-                            stroke={seriesColors[k]}
-                            strokeWidth={3}
-                            dot={{ r: 4, fill: seriesColors[k], strokeWidth: 0 }}
-                            activeDot={{ r: 6 }}
-                          />
-                        ))}
-                        <ChartLegend content={<ChartLegendContent />} className="mt-4" />
-                      </LineChart>
-                    </ChartContainer>
-                  </div>
+                      ))}
+                      <ChartLegend content={<ChartLegendContent />} className="mt-4" />
+                    </LineChart>
+                  </ChartContainer>
                 </div>
               )}
             </CardContent>
           </Card>
 
           <div className="flex flex-col gap-8 min-w-0">
-            <StatusDistributionChart data={statusData} isLoading={isLoading} />
+            <StatusDistributionChart data={statusChartData} isLoading={isLoading} />
             <div className="flex-1 min-h-0">
               <RecentActivity submissions={submissionsRaw} />
             </div>

@@ -7,33 +7,44 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, Mail, Phone, MapPin, User, Building2, Send, Edit, Save, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Search, Mail, Phone, User as UserIcon, Building2, Plus, Trash2, Save, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
+import { User } from "@/lib/types";
 
-type SchoolUser = {
-  id: string;
-  name: string;
-  email: string;
-  responsibleName: string;
-  phone: string;
-  address: string;
-  status: 'active' | 'inactive';
+// Helper to fetch schools for dropdown
+const useSchools = () => {
+  const [schools, setSchools] = useState<{ id: string, name: string }[]>([]);
+  useEffect(() => {
+    fetch('/api/reports/summary?start=0&end=0') // Hack to get schools list from summary or create dedicated endpoint?
+      // Actually /api/reports/summary returns bySchool with names. 
+      // Better to use /api/schools/settings for list? No, that's single.
+      // Let's assume we can get unique school names from a simple call or just specific endpoint.
+      // Since I don't have a specific "list all schools" endpoint that returns IDs cleanly without heavy load, 
+      // I'll parse from reports summary for now or just hardcode the list used elsewhere if static.
+      // The `users` endpoint was returning schools before.
+      // Let's use the static list from `constants` or similar if available, or just fetch from summary.
+      // Actually, I can add a `list` param to schools api if needed, but let's try to get from summary.
+      .then(res => res.json())
+      .then(data => {
+        if (data.bySchool) setSchools(data.bySchool.map((s: any) => ({ id: s.name, name: s.name })));
+      });
+  }, []);
+  return schools;
 };
 
-const UserCard = ({ user, onClick }: { user: SchoolUser, onClick: () => void }) => (
+const UserCard = ({ user, onClick }: { user: User, onClick: () => void }) => (
   <Card className="hover:shadow-lg transition-all cursor-pointer group border-slate-200" onClick={onClick}>
     <CardHeader className="flex flex-row items-center gap-4 pb-2">
       <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-        <Building2 className="w-6 h-6" />
+        <UserIcon className="w-6 h-6" />
       </div>
       <div className="flex-1 overflow-hidden">
         <CardTitle className="text-base font-bold truncate" title={user.name}>{user.name}</CardTitle>
         <CardDescription className="truncate flex items-center gap-1">
-          <User className="w-3 h-3" /> {user.responsibleName}
+          <Building2 className="w-3 h-3" /> {user.schoolId || 'Sem Escola'}
         </CardDescription>
       </div>
     </CardHeader>
@@ -44,59 +55,34 @@ const UserCard = ({ user, onClick }: { user: SchoolUser, onClick: () => void }) 
           <span className="truncate">{user.email}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Badge
-            variant="secondary"
-            className={
-              user.status === 'active'
-                ? "bg-emerald-100 text-emerald-700 font-medium border border-emerald-200"
-                : "bg-slate-100 text-slate-500 font-medium border border-slate-200"
-            }
-          >
-            {user.status === 'active' ? 'Ativo' : 'Inativo'}
-          </Badge>
+          <Badge variant="outline" className="capitalize">{user.role === 'school_responsible' ? 'Responsável' : user.role}</Badge>
         </div>
       </div>
     </CardContent>
-    <CardFooter className="pt-2">
-      <Button variant="ghost" className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-        Gerenciar Conta
-      </Button>
-    </CardFooter>
   </Card>
 );
 
-const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: { user: SchoolUser | null, isOpen: boolean, onClose: () => void, onUpdate: () => void }) => {
+const UserDetailsModal = ({ user, isOpen, onClose, onUpdate, schools }: { user: User | null, isOpen: boolean, onClose: () => void, onUpdate: () => void, schools: { id: string, name: string }[] }) => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("details");
   const [isLoading, setIsLoading] = useState(false);
   const isEditing = !!user;
 
-  // Edit Form State - Initialize with empty values if new
-  const [formData, setFormData] = useState<Partial<SchoolUser>>({
+  const [formData, setFormData] = useState<Partial<User>>({
+    role: 'school_responsible',
     status: 'active'
   });
-
-  // Email Form State
-  const [emailSubject, setEmailSubject] = useState("");
-  const [emailMessage, setEmailMessage] = useState("");
 
   useEffect(() => {
     if (isOpen) {
       if (user) {
         setFormData(user);
-        setEmailSubject(`Atualização - ${user.name}`);
-        setEmailMessage(`Prezados,\n\nGostaríamos de informar que...`);
       } else {
-        // Reset for new user
-        setFormData({ status: 'active' });
-        setEmailSubject("");
-        setEmailMessage("");
-        setActiveTab("details");
+        setFormData({ role: 'school_responsible', status: 'active' });
       }
     }
   }, [user, isOpen]);
 
-  const handleSaveDetails = async () => {
+  const handleSave = async () => {
     setIsLoading(true);
     try {
       const res = await fetch('/api/users', {
@@ -106,14 +92,14 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: { user: SchoolUse
       });
 
       if (res.ok) {
-        toast({ title: "Sucesso", description: isEditing ? "Dados da escola atualizados." : "Escola cadastrada com sucesso." });
+        toast({ title: "Sucesso", description: "Usuário salvo com sucesso." });
         onUpdate();
         onClose();
       } else {
         throw new Error("Failed");
       }
     } catch {
-      toast({ title: "Erro", description: "Falha ao salvar dados.", variant: "destructive" });
+      toast({ title: "Erro", description: "Falha ao salvar usuário.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -121,7 +107,7 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: { user: SchoolUse
 
   const handleDelete = async () => {
     if (!user) return;
-    if (!confirm("Tem certeza que deseja excluir esta escola?")) return;
+    if (!confirm("Tem certeza que deseja excluir este usuário?")) return;
 
     setIsLoading(true);
     try {
@@ -132,161 +118,91 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: { user: SchoolUse
       });
 
       if (res.ok) {
-        toast({ title: "Sucesso", description: "Escola removida." });
+        toast({ title: "Sucesso", description: "Usuário removido." });
         onUpdate();
         onClose();
       } else {
         throw new Error("Failed");
       }
     } catch {
-      toast({ title: "Erro", description: "Falha ao excluir escola.", variant: "destructive" });
+      toast({ title: "Erro", description: "Falha ao excluir usuário.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
-
-  const handleSendEmail = async () => {
-    if (!user) return;
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/notifications/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          schoolId: user.id,
-          recipientEmail: user.email,
-          subject: emailSubject,
-          message: emailMessage
-        })
-      });
-
-      if (res.ok) {
-        toast({ title: "E-mail Enviado", description: `Notificação enviada para ${user.email}` });
-        setActiveTab("details"); // Switch back
-      } else {
-        throw new Error("Failed");
-      }
-    } catch {
-      toast({ title: "Erro", description: "Falha ao enviar e-mail.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // if (!user) return null; // Removed to allow "New User" mode where user is null but isOpen is true
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-blue-600" />
-            {isEditing ? user.name : "Nova Escola"}
+            <UserIcon className="w-5 h-5 text-blue-600" />
+            {isEditing ? `Editar: ${user.name}` : "Novo Usuário"}
           </DialogTitle>
-          <DialogDescription>Gerenciamento da conta escolar.</DialogDescription>
+          <DialogDescription>Gerenciamento de usuário do sistema.</DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="details">Informações da Conta</TabsTrigger>
-            {isEditing && <TabsTrigger value="email">Enviar Notificação</TabsTrigger>}
-          </TabsList>
-
-          <TabsContent value="details" className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nome da Escola</Label>
-                <Input
-                  value={formData.name || ''}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Responsável</Label>
-                <Input
-                  value={formData.responsibleName || ''}
-                  onChange={(e) => setFormData({ ...formData, responsibleName: e.target.value })}
-                />
-              </div>
-            </div>
-
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>E-mail de Contato</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  className="pl-9"
-                  value={formData.email || ''}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Telefone</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input
-                    className="pl-9"
-                    value={formData.phone || ''}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Status da Conta</Label>
-                <div className="flex items-center justify-between rounded-lg border p-3 bg-white">
-                  <span className="text-sm text-slate-500">
-                    {formData.status === 'active' ? 'Acesso Liberado' : 'Acesso Bloqueado'}
-                  </span>
-                  <Switch
-                    checked={formData.status === 'active'}
-                    onCheckedChange={(checked) => setFormData({ ...formData, status: checked ? 'active' : 'inactive' })}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Endereço</Label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  className="pl-9"
-                  value={formData.address || ''}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                />
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="email" className="space-y-4 py-4">
-            <div className="bg-blue-50 p-4 rounded-lg flex gap-3 text-sm text-blue-700">
-              <Mail className="w-5 h-5 shrink-0" />
-              <p>Esta mensagem será enviada para o e-mail cadastrado da escola. Use para informar sobre pendências ou atualizações.</p>
-            </div>
-            <div className="space-y-2">
-              <Label>Assunto</Label>
+              <Label>Nome Completo</Label>
               <Input
-                value={emailSubject}
-                onChange={(e) => setEmailSubject(e.target.value)}
-                placeholder="Assunto da mensagem..."
+                value={formData.name || ''}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ex: João Silva"
               />
             </div>
             <div className="space-y-2">
-              <Label>Mensagem</Label>
-              <Textarea
-                value={emailMessage}
-                onChange={(e) => setEmailMessage(e.target.value)}
-                placeholder="Digite sua mensagem aqui..."
-                className="min-h-[150px]"
-              />
+              <Label>Função</Label>
+              <Select value={formData.role} onValueChange={(v: any) => setFormData({ ...formData, role: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectItem value="school_responsible">Resp. Escola</SelectItem>
+                  <SelectItem value="nutritionist">Nutricionista</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
 
-        <DialogFooter className="flex justify-between items-center w-full sm:justify-between">
+          <div className="space-y-2">
+            <Label>E-mail (Login)</Label>
+            <Input
+              value={formData.email || ''}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="email@exemplo.com"
+            />
+          </div>
+
+          {formData.role === 'school_responsible' && (
+            <div className="space-y-2">
+              <Label>Vincular Escola</Label>
+              <Select value={formData.schoolId} onValueChange={(v) => setFormData({ ...formData, schoolId: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a escola..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {schools.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label>Telefone</Label>
+            <Input
+              value={formData.phone || ''}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              placeholder="(00) 00000-0000"
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="flex justify-between sm:justify-between">
           <div className="flex gap-2">
             {isEditing && (
               <Button variant="destructive" onClick={handleDelete} disabled={isLoading} className="bg-red-50 text-red-600 hover:bg-red-100 border-none shadow-none">
@@ -297,17 +213,10 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: { user: SchoolUse
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose} disabled={isLoading}>Cancelar</Button>
-            {activeTab === 'details' ? (
-              <Button onClick={handleSaveDetails} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
-                {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                Salvar Alterações
-              </Button>
-            ) : (
-              <Button onClick={handleSendEmail} disabled={isLoading || !emailSubject || !emailMessage}>
-                {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-                Enviar E-mail
-              </Button>
-            )}
+            <Button onClick={handleSave} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
+              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              Salvar
+            </Button>
           </div>
         </DialogFooter>
       </DialogContent>
@@ -317,12 +226,13 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate }: { user: SchoolUse
 
 export default function AdminUsers() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [users, setUsers] = useState<SchoolUser[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState<SchoolUser | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const schools = useSchools();
 
-  const handleOpenModal = (user: SchoolUser | null) => {
+  const handleOpenModal = (user: User | null) => {
     setSelectedUser(user);
     setIsModalOpen(true);
   };
@@ -349,15 +259,15 @@ export default function AdminUsers() {
 
   return (
     <AdminLayout
-      title="Usuários"
-      description="Gerencie as contas das escolas e canais de comunicação."
+      title="Gestão de Usuários"
+      description="Controle de acesso e responsáveis por unidade."
     >
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
           <div className="relative max-w-md w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
-              placeholder="Buscar usuário ou escola..."
+              placeholder="Buscar usuário..."
               className="pl-9 bg-white border-slate-200 shadow-sm focus:ring-blue-500"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -365,7 +275,7 @@ export default function AdminUsers() {
           </div>
           <Button onClick={() => handleOpenModal(null)} className="bg-blue-600 hover:bg-blue-700 text-white">
             <Plus className="w-4 h-4 mr-2" />
-            Cadastrar Escola
+            Novo Usuário
           </Button>
         </div>
 
@@ -394,6 +304,7 @@ export default function AdminUsers() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onUpdate={fetchUsers}
+          schools={schools}
         />
       </div>
     </AdminLayout>

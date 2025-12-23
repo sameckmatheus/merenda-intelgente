@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap, Users, Clock, Calendar, Search, Award } from 'lucide-react';
+import { GraduationCap, Users, Clock, Calendar, Search, Award, BarChart } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -76,10 +76,10 @@ const SchoolCard = ({ name, count, index, onClick }: { name: string, count: numb
 const SchoolDetailsModal = ({ school, isOpen, onClose }: { school: string | null, isOpen: boolean, onClose: () => void }) => {
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [schoolSettings, setSchoolSettings] = useState<{ counts?: { morning: number, afternoon: number, night: number } }>({});
+  const [schoolSettings, setSchoolSettings] = useState<{ counts?: { morning: number, afternoon: number, night: number }, contacts?: { email: string, whatsapp: string } }>({});
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [editValues, setEditValues] = useState({ morning: 0, afternoon: 0, night: 0 });
+  const [editValues, setEditValues] = useState({ morning: 0, afternoon: 0, night: 0, email: '', whatsapp: '' });
 
   useEffect(() => {
     if (school && isOpen) {
@@ -96,8 +96,9 @@ const SchoolDetailsModal = ({ school, isOpen, onClose }: { school: string | null
         .then(res => res.json())
         .then(json => {
           const counts = json.settings?.counts || { morning: 0, afternoon: 0, night: 0 };
-          setSchoolSettings({ counts });
-          setEditValues(counts);
+          const contacts = json.settings?.contacts || { email: '', whatsapp: '' };
+          setSchoolSettings({ counts, contacts });
+          setEditValues({ ...counts, ...contacts });
         })
         .catch(err => console.error(err));
 
@@ -117,10 +118,11 @@ const SchoolDetailsModal = ({ school, isOpen, onClose }: { school: string | null
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           schoolName: school,
-          counts: editValues
+          counts: { morning: editValues.morning, afternoon: editValues.afternoon, night: editValues.night },
+          contacts: { email: editValues.email, whatsapp: editValues.whatsapp }
         })
       });
-      setSchoolSettings({ counts: editValues });
+      setSchoolSettings({ counts: { morning: editValues.morning, afternoon: editValues.afternoon, night: editValues.night }, contacts: { email: editValues.email, whatsapp: editValues.whatsapp } });
       setIsEditing(false);
     } catch (error) {
       console.error("Failed to save settings", error);
@@ -130,7 +132,10 @@ const SchoolDetailsModal = ({ school, isOpen, onClose }: { school: string | null
   };
 
   const handleCancel = () => {
-    setEditValues(schoolSettings.counts || { morning: 0, afternoon: 0, night: 0 });
+    setEditValues({
+      ...(schoolSettings.counts || { morning: 0, afternoon: 0, night: 0 }),
+      ...(schoolSettings.contacts || { email: '', whatsapp: '' })
+    });
     setIsEditing(false);
   };
 
@@ -190,9 +195,14 @@ const SchoolDetailsModal = ({ school, isOpen, onClose }: { school: string | null
                       <Users className="w-4 h-4" /> Alunos Matriculados
                     </CardTitle>
                     {!isEditing ? (
-                      <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                        Editar
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => window.open(`/admin/reports?school=${encodeURIComponent(school || '')}`, '_self')} className="h-8 text-slate-600 hover:text-blue-600 hover:bg-slate-50 gap-2">
+                          <BarChart className="w-3 h-3" /> Relatórios
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)} className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                          Editar
+                        </Button>
+                      </div>
                     ) : (
                       <div className="flex gap-2">
                         <Button variant="ghost" size="sm" onClick={handleCancel} disabled={isSaving} className="h-8 text-slate-500">
@@ -229,6 +239,45 @@ const SchoolDetailsModal = ({ school, isOpen, onClose }: { school: string | null
                           </div>
                         );
                       })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Contact Info Card */}
+                <Card className="bg-white/60 border-0 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-slate-500 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-green-600" /> Contatos
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4 pt-2">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs font-medium text-slate-500">Institucional (E-mail)</span>
+                        {isEditing ? (
+                          <Input
+                            className="h-8 bg-white"
+                            value={editValues.email || ''}
+                            onChange={(e) => setEditValues(prev => ({ ...prev, email: e.target.value }))}
+                            placeholder="escola@exemplo.com"
+                          />
+                        ) : (
+                          <span className="text-sm text-slate-700">{schoolSettings.contacts?.email || '-'}</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs font-medium text-slate-500">WhatsApp (Direção/Coord.)</span>
+                        {isEditing ? (
+                          <Input
+                            className="h-8 bg-white"
+                            value={editValues.whatsapp || ''}
+                            onChange={(e) => setEditValues(prev => ({ ...prev, whatsapp: e.target.value }))}
+                            placeholder="(00) 00000-0000"
+                          />
+                        ) : (
+                          <span className="text-sm text-slate-700">{schoolSettings.contacts?.whatsapp || '-'}</span>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
