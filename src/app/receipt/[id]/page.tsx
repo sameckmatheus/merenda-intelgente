@@ -14,12 +14,14 @@ import { LoaderCircle, Printer } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 const DetailItem = ({ label, value }: { label: string; value?: string | number | boolean | null }) => {
-  if (value === null || value === undefined || value === '' || value === false) return null;
+  if (value === null || value === undefined || value === '') return null;
 
   return (
     <div className="grid grid-cols-3 gap-2">
       <p className="font-semibold text-gray-600 col-span-1">{label}:</p>
-      <p className="text-gray-800 col-span-2">{typeof value === 'boolean' ? 'Sim' : String(value)}</p>
+      <p className="text-gray-800 col-span-2">
+        {typeof value === 'boolean' ? (value ? 'Sim' : 'Não') : String(value)}
+      </p>
     </div>
   );
 };
@@ -58,8 +60,8 @@ export default function SubmissionReceipt() {
   const handlePrint = () => {
     window.print();
   };
-  
-  const menuTypeTranslations: {[key: string]: string} = {
+
+  const menuTypeTranslations: { [key: string]: string } = {
     planned: "Previsto",
     alternative: "Alternativo",
     improvised: "Improvisado"
@@ -120,17 +122,17 @@ export default function SubmissionReceipt() {
           </section>
 
           <Separator className="my-8" />
-          
+
           <section>
             <h3 className="text-lg font-bold text-gray-800 mb-4">Detalhes da Merenda</h3>
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-                <DetailItem label="Alunos Totais" value={submission.totalStudents} />
-                <DetailItem label="Alunos Presentes" value={submission.presentStudents} />
-                <DetailItem label="Cardápio Utilizado" value={menuTypeTranslations[submission.menuType]} />
-             </div>
-              <div className="mt-4">
-                <DetailItem label="Descrição Cardápio Alternativo" value={submission.alternativeMenuDescription} />
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+              <DetailItem label="Alunos Totais" value={submission.totalStudents} />
+              <DetailItem label="Alunos Presentes" value={submission.presentStudents} />
+              <DetailItem label="Cardápio Utilizado" value={menuTypeTranslations[submission.menuType]} />
+            </div>
+            <div className="mt-4">
+              <DetailItem label="Descrição Cardápio Alternativo" value={submission.alternativeMenuDescription} />
+            </div>
           </section>
 
           <Separator className="my-8" />
@@ -138,13 +140,13 @@ export default function SubmissionReceipt() {
           <section>
             <h3 className="text-lg font-bold text-gray-800 mb-4">Controle de Itens e Suprimentos</h3>
             <div className="space-y-4">
-                <DetailItem label="Pedido de Ajuda" value={submission.helpNeeded} />
-                <DetailItem label="Itens em Falta" value={submission.missingItems} />
-                <DetailItem label="Pode Comprar os Itens" value={submission.canBuyMissingItems} />
-                <DetailItem label="Itens Comprados" value={submission.itemsPurchased} />
-                <Separator />
-                <DetailItem label="Recebeu Suprimentos" value={submission.suppliesReceived} />
-                <DetailItem label="Suprimentos Recebidos" value={submission.suppliesDescription} />
+              <DetailItem label="Pedido de Ajuda" value={submission.helpNeeded} />
+              <DetailItem label="Itens em Falta" value={submission.missingItems} />
+              <DetailItem label="Pode Comprar os Itens" value={submission.canBuyMissingItems} />
+              <DetailItem label="Itens Comprados" value={submission.itemsPurchased} />
+              <Separator />
+              <DetailItem label="Recebeu Suprimentos" value={submission.suppliesReceived} />
+              <DetailItem label="Suprimentos Recebidos" value={submission.suppliesDescription} />
             </div>
           </section>
 
@@ -154,14 +156,14 @@ export default function SubmissionReceipt() {
             <h3 className="text-lg font-bold text-gray-800 mb-4">Observações Gerais</h3>
             <p className="text-gray-700 whitespace-pre-wrap">{submission.observations || 'Nenhuma observação.'}</p>
           </section>
-          
-           <footer className="mt-12 pt-8 border-t-2 border-gray-200 text-center text-sm text-gray-500">
-                <p>Documento gerado em {format(new Date(), "dd 'de' MMMM 'de' yyyy, 'às' HH:mm", { locale: ptBR })}</p>
-                <p>MenuPlanner - Sistema de Gestão de Merenda Escolar</p>
-           </footer>
+
+          <footer className="mt-12 pt-8 border-t-2 border-gray-200 text-center text-sm text-gray-500">
+            <p>Documento gerado em {format(new Date(), "dd 'de' MMMM 'de' yyyy, 'às' HH:mm", { locale: ptBR })}</p>
+            <p>MenuPlanner - Sistema de Gestão de Merenda Escolar</p>
+          </footer>
         </div>
       </div>
-       <style jsx global>{`
+      <style jsx global>{`
         @media print {
           body {
             -webkit-print-color-adjust: exact;
