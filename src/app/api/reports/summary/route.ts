@@ -23,10 +23,27 @@ export async function GET(request: NextRequest) {
 
     const db = getFirestore();
 
-    // ROBUST STRATEGY: Fetch latest 500 records and filter in memory.
-    const query = db.collection('submissions')
-      .orderBy('date', 'desc')
-      .limit(500);
+    // Variables will be initialized after query execution to avoid duplication issues
+
+
+    // Prepare date range filter
+    let startDate = 0;
+    let endDate = Number.MAX_SAFE_INTEGER;
+
+    if (startParam && endParam) {
+      startDate = Number(startParam);
+      endDate = Number(endParam);
+    } else {
+      startDate = Date.now() - (30 * 24 * 60 * 60 * 1000);
+      endDate = Date.now();
+    }
+
+    // ROBUST STRATEGY: Query by Date Range directly to ensure we count all records in the period.
+    // Removed .limit(500) which was causing inaccurate counts when total records exceeded 500.
+    let query = db.collection('submissions')
+      .where('date', '>=', Timestamp.fromMillis(startDate))
+      .where('date', '<=', Timestamp.fromMillis(endDate))
+      .orderBy('date', 'desc');
 
     const snapshot = await query.get();
 
@@ -39,34 +56,11 @@ export async function GET(request: NextRequest) {
     };
     const missingItemsCount: Record<string, number> = {};
 
-    // Prepare date range filter
-    let startDate = 0;
-    let endDate = Number.MAX_SAFE_INTEGER;
-
-    if (startParam && endParam) {
-      startDate = Number(startParam);
-      endDate = Number(endParam);
-    } else {
-      startDate = Date.now() - (30 * 24 * 60 * 60 * 1000);
-    }
-
     snapshot.docs.forEach(doc => {
       const data = doc.data();
 
-      // ROBUST DATE PARSING
-      let docDateMs = 0;
-      if (data.date && typeof data.date.toMillis === 'function') {
-        docDateMs = data.date.toMillis();
-      } else if (data.date instanceof Date) {
-        docDateMs = data.date.getTime();
-      } else if (typeof data.date === 'number') {
-        docDateMs = data.date;
-      } else if (typeof data.date === 'string') {
-        docDateMs = new Date(data.date).getTime();
-      }
+      // No need to filter by date again as it is done in the query
 
-      // Filter by Date Range
-      if (docDateMs < startDate || docDateMs > endDate) return;
 
       // Filter by School
       if (school && school !== 'all' && data.school !== school) return;
