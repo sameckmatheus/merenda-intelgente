@@ -133,17 +133,41 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editingCategory, setEditingCategory] = useState<{ original: string, new: string } | null>(null);
 
+  const saveGlobalCategories = async (newCategories: string[]) => {
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inventoryCategories: newCategories })
+      });
+      setCategories(newCategories);
+    } catch (e) {
+      console.error("Failed to save global categories", e);
+      alert("Erro ao salvar categorias globais.");
+    }
+  };
+
   useEffect(() => {
     if (isOpen && school) {
+      // Fetch School Inventory
       fetch(`/api/schools/settings?school=${encodeURIComponent(school)}`)
         .then(res => res.json())
         .then(data => {
-          if (data.settings) {
-            if (data.settings.inventory) setItems(data.settings.inventory);
-            if (data.settings.categories) setCategories(data.settings.categories);
+          if (data.settings && data.settings.inventory) {
+            setItems(data.settings.inventory);
           }
         })
         .catch(err => console.error("Failed to fetch inventory", err));
+
+      // Fetch Global Categories
+      fetch('/api/settings')
+        .then(res => res.json())
+        .then(data => {
+          if (data.settings && data.settings.inventoryCategories) {
+            setCategories(data.settings.inventoryCategories);
+          }
+        })
+        .catch(err => console.error("Failed to fetch global categories", err));
     }
   }, [isOpen, school]);
 
@@ -176,8 +200,8 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           schoolName: school,
-          inventory: items,
-          categories: categories
+          inventory: items
+          // categories are global now, not saved per school context here
         })
       });
 
@@ -410,8 +434,9 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
                         />
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => {
                           if (editingCategory.new && !categories.includes(editingCategory.new)) {
-                            setCategories(prev => prev.map(c => c === cat ? editingCategory.new : c));
-                            // Update items with this category
+                            const newCats = categories.map(c => c === cat ? editingCategory.new : c);
+                            saveGlobalCategories(newCats);
+                            // Update items with this category locally
                             setItems(prev => prev.map(i => i.category === cat ? { ...i, category: editingCategory.new } : i));
                             setEditingCategory(null);
                           }
@@ -433,7 +458,8 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
                           {cat !== 'Outros' && (
                             <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-red-600" onClick={() => {
                               // In real app check usage. Here just delete.
-                              setCategories(prev => prev.filter(c => c !== cat));
+                              const newCats = categories.filter(c => c !== cat);
+                              saveGlobalCategories(newCats);
                             }}>
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -461,7 +487,7 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
                       } else {
                         newCats.push(newCategoryName);
                       }
-                      setCategories(newCats);
+                      saveGlobalCategories(newCats);
                       setNewCategoryName("");
                     }
                   }} size="icon" className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white">
@@ -473,12 +499,11 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
 
             <div className="flex justify-end pt-2">
               <Button variant="outline" onClick={() => setIsManagingCategories(false)}>Fechar</Button>
-              {/* Add Save button for Categories if needed, or rely on main save? Categories update state immediately. Main save persists. */}
             </div>
-          </DialogContent >
-        </Dialog >
-      </DialogContent >
-    </Dialog >
+          </DialogContent>
+        </Dialog>
+      </DialogContent>
+    </Dialog>
   );
 };
 

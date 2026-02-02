@@ -38,7 +38,8 @@ export async function GET(request: Request) {
                     schoolYear: '2025',
                     maintenanceMode: false,
                     deliveryDeadlineDays: 2,
-                    notificationsEnabled: true
+                    notificationsEnabled: true,
+                    inventoryCategories: ["Todos", "Estocáveis", "Proteínas", "Hortifruti", "Outros"] // Mock Default Categories
                 }
             }, { status: 200 });
         }
