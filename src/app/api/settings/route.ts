@@ -39,7 +39,13 @@ export async function GET(request: Request) {
                     maintenanceMode: false,
                     deliveryDeadlineDays: 2,
                     notificationsEnabled: true,
-                    inventoryCategories: ["Todos", "Estocáveis", "Proteínas", "Hortifruti", "Outros"] // Mock Default Categories
+                    inventoryCategories: ["Todos", "Estocáveis", "Proteínas", "Hortifruti", "Outros"], // Mock Default Categories
+                    inventoryItems: [
+                        { id: '1', name: 'Arroz', category: 'Estocáveis', unit: 'kg', minQuantity: 10 },
+                        { id: '2', name: 'Feijão', category: 'Estocáveis', unit: 'kg', minQuantity: 10 },
+                        { id: '3', name: 'Macarrão', category: 'Estocáveis', unit: 'kg', minQuantity: 5 },
+                        { id: '4', name: 'Carne Moída', category: 'Proteínas', unit: 'kg', minQuantity: 5 },
+                    ]
                 }
             }, { status: 200 });
         }

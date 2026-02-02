@@ -147,27 +147,68 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
     }
   };
 
+  const saveGlobalItems = async (newItems: InventoryItem[]) => {
+    try {
+      const definitions = newItems.map(({ id, name, category, unit, minQuantity }) => ({ id, name, category, unit, minQuantity }));
+
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inventoryItems: definitions })
+      });
+    } catch (e) {
+      console.error("Failed to save global items", e);
+      alert("Erro ao salvar itens globais.");
+    }
+  };
+
   useEffect(() => {
     if (isOpen && school) {
-      // Fetch School Inventory
-      fetch(`/api/schools/settings?school=${encodeURIComponent(school)}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.settings && data.settings.inventory) {
-            setItems(data.settings.inventory);
-          }
-        })
-        .catch(err => console.error("Failed to fetch inventory", err));
+      const fetchData = async () => {
+        try {
+          const [schoolRes, globalRes] = await Promise.all([
+            fetch(`/api/schools/settings?school=${encodeURIComponent(school)}`),
+            fetch('/api/settings')
+          ]);
 
-      // Fetch Global Categories
-      fetch('/api/settings')
-        .then(res => res.json())
-        .then(data => {
-          if (data.settings && data.settings.inventoryCategories) {
-            setCategories(data.settings.inventoryCategories);
+          const schoolData = await schoolRes.json();
+          const globalData = await globalRes.json();
+
+          let globalItems: InventoryItem[] = [];
+          let localQuantities: Record<string, number> = {};
+
+          // Parse Global Items
+          if (globalData.settings) {
+            if (globalData.settings.inventoryCategories) {
+              setCategories(globalData.settings.inventoryCategories);
+            }
+            if (globalData.settings.inventoryItems) {
+              globalItems = globalData.settings.inventoryItems;
+            }
           }
-        })
-        .catch(err => console.error("Failed to fetch global categories", err));
+
+          // Parse Local Quantities
+          if (schoolData.settings && schoolData.settings.inventory) {
+            const localInv = schoolData.settings.inventory as any[];
+            localInv.forEach(i => {
+              if (i.id) localQuantities[i.id] = i.quantity || 0;
+            });
+          }
+
+          // Merge
+          const merged = globalItems.map(item => ({
+            ...item,
+            quantity: localQuantities[item.id] || 0
+          }));
+
+          setItems(merged);
+
+        } catch (err) {
+          console.error("Failed to fetch data", err);
+        }
+      };
+
+      fetchData();
     }
   }, [isOpen, school]);
 
@@ -182,9 +223,14 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
     }));
   };
 
-  const handleDeleteItem = (id: string) => {
-    setItems(prev => prev.filter(i => i.id !== id));
-    setChangedItems(prev => new Set(prev).add('deleted')); // Mark as changed to trigger save
+  const handleDeleteItem = async (id: string) => {
+    const confirmDelete = confirm("Isso irá remover este item de TODAS as escolas. As quantidades locais permanecerão salvas mas o item não aparecerá mais. Continuar?");
+    if (confirmDelete) {
+      const newItems = items.filter(i => i.id !== id);
+      setItems(newItems);
+      // Remove from Global Definitions
+      await saveGlobalItems(newItems);
+    }
   };
 
   const filteredItems = items.filter(item => {
@@ -200,8 +246,7 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           schoolName: school,
-          inventory: items
-          // categories are global now, not saved per school context here
+          inventory: items.map(i => ({ id: i.id, quantity: i.quantity })) // Save only quantities/ids locally
         })
       });
 
@@ -401,11 +446,14 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsAddingItem(false)}>Cancelar</Button>
               <Button onClick={() => {
+                let updatedList;
                 if (editingItem) {
-                  setItems(prev => prev.map(i => i.id === editingItem.id ? { ...i, ...newItemData } as InventoryItem : i));
+                  updatedList = items.map(i => i.id === editingItem.id ? { ...i, ...newItemData } as InventoryItem : i);
                 } else {
-                  setItems(prev => [...prev, { ...newItemData, id: Math.random().toString(36).substr(2, 9) } as InventoryItem]);
+                  updatedList = [...items, { ...newItemData, id: Math.random().toString(36).substr(2, 9) } as InventoryItem];
                 }
+                setItems(updatedList);
+                saveGlobalItems(updatedList); // Update Global Definitions
                 setIsAddingItem(false);
                 setEditingItem(null);
               }}>Salvar</Button>

@@ -211,9 +211,17 @@ const SubmissionsTable: FC<{ submissions: any[] }> = ({ submissions }) => (
   </Card>
 );
 
-const getDateRange = (date: Date, filterType: 'day' | 'week' | 'month'): { start: number, end: number } => {
+const getDateRange = (date: Date, filterType: 'day' | 'week' | 'month' | 'year' | 'custom', dateRange?: any): { start: number, end: number } => {
   const d = new Date(date);
   let start: Date, end: Date;
+
+  if (filterType === 'custom' && dateRange?.from) {
+    start = new Date(dateRange.from);
+    start.setHours(0, 0, 0, 0);
+    end = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
+    end.setHours(23, 59, 59, 999);
+    return { start: start.getTime(), end: end.getTime() };
+  }
 
   if (filterType === 'day') {
     start = new Date(d);
@@ -227,9 +235,12 @@ const getDateRange = (date: Date, filterType: 'day' | 'week' | 'month'): { start
     end = new Date(d);
     end.setDate(d.getDate() + 3);
     end.setHours(23, 59, 59, 999);
-  } else { // month
+  } else if (filterType === 'month') {
     start = new Date(d.getFullYear(), d.getMonth(), 1);
     end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+  } else { // year
+    start = new Date(d.getFullYear(), 0, 1);
+    end = new Date(d.getFullYear(), 11, 31, 23, 59, 59, 999);
   }
   return { start: start.getTime(), end: end.getTime() };
 };
@@ -237,7 +248,8 @@ const getDateRange = (date: Date, filterType: 'day' | 'week' | 'month'): { start
 export default function AdminReports() {
   const searchParams = useSearchParams();
   const [date, setDate] = useState<Date | undefined>(new Date());
-  const [filterType, setFilterType] = useState<'day' | 'week' | 'month'>('day');
+  const [dateRange, setDateRange] = useState<any>();
+  const [filterType, setFilterType] = useState<'day' | 'week' | 'month' | 'year' | 'custom'>('day');
   const [selectedSchool, setSelectedSchool] = useState<string>(searchParams.get('school') || 'all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [helpNeededFilter, setHelpNeededFilter] = useState<'all' | 'yes' | 'no'>('all');
@@ -260,8 +272,8 @@ export default function AdminReports() {
   const fetchSummary = useCallback(async () => {
     setIsLoading(true);
     const params = new URLSearchParams();
-    if (date) {
-      const r = getDateRange(date, filterType);
+    if (date || dateRange) {
+      const r = getDateRange(date || new Date(), filterType, dateRange);
       params.set('start', r.start.toString());
       params.set('end', r.end.toString());
     }
@@ -285,51 +297,55 @@ export default function AdminReports() {
       });
       setSubmissionsRaw(rawData.submissions || []);
 
-      // Prepare Time Series
+      // Prepare Time Series (General Volume)
       const raws = rawData.submissions || [];
-      const countsByDayAndSchool: Record<string, Record<string, number>> = {};
-      const totalBySchool: Record<string, number> = {};
+      const countsByBucket: Record<string, number> = {};
+
       raws.forEach((r: any) => {
         const ts = typeof r.date === 'number' ? new Date(r.date) : new Date(r.date?.toMillis?.() || r.date || Date.now());
-        const key = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}-${String(ts.getDate()).padStart(2, '0')}`;
-        const school = r.school || 'Sem Escola';
-        countsByDayAndSchool[key] = countsByDayAndSchool[key] || {};
-        countsByDayAndSchool[key][school] = (countsByDayAndSchool[key][school] || 0) + 1;
-        totalBySchool[school] = (totalBySchool[school] || 0) + 1;
+        let key = '';
+
+        if (filterType === 'year') {
+          // Bucket by Month: YYYY-MM
+          key = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}`;
+        } else {
+          // Bucket by Day: YYYY-MM-DD
+          key = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}-${String(ts.getDate()).padStart(2, '0')}`;
+        }
+
+        countsByBucket[key] = (countsByBucket[key] || 0) + 1;
       });
 
-      const seriesList = Object.entries(totalBySchool).sort((a, b) => b[1] - a[1]).map(([n]) => n);
-      const colorMap: Record<string, string> = {};
-      seriesList.forEach((k, idx) => { colorMap[k] = COLORS[idx % COLORS.length]; });
-
       let series: any[] = [];
-      const sortedKeys = Object.keys(countsByDayAndSchool).sort();
+      const sortedKeys = Object.keys(countsByBucket).sort();
+
+      // Fill gaps if needed? For now simple implementation
       if (sortedKeys.length > 0) {
         sortedKeys.forEach(key => {
-          const dayEntry = countsByDayAndSchool[key];
           const parts = key.split('-');
-          const label = `${parts[2]}/${parts[1]}`;
-          const row: any = { date: key, label, count: Object.values(dayEntry).reduce((a, b) => a + b, 0) };
-          seriesList.forEach(k => row[k] = dayEntry[k] || 0);
-          series.push(row);
+          let label = '';
+          if (parts.length === 2) { // YYYY-MM
+            const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+            label = monthNames[parseInt(parts[1]) - 1];
+          } else {
+            label = `${parts[2]}/${parts[1]}`;
+          }
+
+          series.push({ date: key, label, count: countsByBucket[key], total: countsByBucket[key] });
         });
       }
 
       setTimeSeries(series);
-      setSeriesKeys(seriesList);
-      setSeriesColors(colorMap);
-      setEnabledSeries(prev => {
-        const next = { ...prev };
-        seriesList.forEach(k => { if (next[k] === undefined) next[k] = true; });
-        return next;
-      });
+      setSeriesKeys(['total']);
+      setSeriesColors({ total: '#3b82f6' }); // Blue for total
+      setEnabledSeries({ total: true });
 
     } catch (err) {
       console.error(err);
     } finally {
       setIsLoading(false);
     }
-  }, [date, filterType, selectedSchool, selectedStatus, helpNeededFilter]);
+  }, [date, dateRange, filterType, selectedSchool, selectedStatus, helpNeededFilter]);
 
   useEffect(() => {
     fetchSummary();
@@ -367,6 +383,8 @@ export default function AdminReports() {
         <Filters
           date={date}
           setDate={setDate}
+          dateRange={dateRange}
+          setDateRange={setDateRange}
           filterType={filterType}
           setFilterType={setFilterType}
           selectedSchool={selectedSchool}
@@ -430,8 +448,10 @@ export default function AdminReports() {
           <Card className="col-span-1 xl:col-span-2 border-0 shadow-lg shadow-blue-900/5 bg-white/80 backdrop-blur-sm flex flex-col min-w-0">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div className="space-y-1">
-                <CardTitle className="text-xl font-bold text-slate-800">Tendência de Registros</CardTitle>
-                <CardDescription>Acompanhamento diário das submissões por escola</CardDescription>
+                <CardTitle className="text-xl font-bold text-slate-800">Tendência de Registros (Volume Geral)</CardTitle>
+                <CardDescription>
+                  {filterType === 'year' ? "Acompanhamento mensal" : "Acompanhamento diário"} do volume total
+                </CardDescription>
               </div>
             </CardHeader>
             <CardContent className="h-[500px]">
@@ -440,10 +460,16 @@ export default function AdminReports() {
               ) : (
                 <div className="h-full w-full">
                   <ChartContainer
-                    config={Object.fromEntries(seriesKeys.map((k) => [k, { label: k, color: seriesColors[k] }]))}
+                    config={{ total: { label: "Total", color: "#3b82f6" } }}
                     className="h-full w-full"
                   >
-                    <LineChart data={timeSeries} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                    <AreaChart data={timeSeries} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                      <defs>
+                        <linearGradient id="fillTotal" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
+                        </linearGradient>
+                      </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                       <XAxis
                         dataKey="label"
@@ -460,27 +486,21 @@ export default function AdminReports() {
                         axisLine={false}
                         tickFormatter={(value) => `${value}`}
                         dx={-10}
-                        domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax, 1) / 10) * 10]}
                         allowDecimals={false}
-                        tickCount={6}
                       />
                       <ChartTooltip
                         content={<ChartTooltipContent indicator="dot" />}
                         cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }}
                       />
-                      {seriesKeys.filter(k => enabledSeries[k]).map((k) => (
-                        <Line
-                          key={k}
-                          type="monotone"
-                          dataKey={k}
-                          stroke={seriesColors[k]}
-                          strokeWidth={3}
-                          dot={{ r: 4, fill: seriesColors[k], strokeWidth: 0 }}
-                          activeDot={{ r: 6 }}
-                        />
-                      ))}
-                      <ChartLegend content={<ChartLegendContent />} className="mt-4" />
-                    </LineChart>
+                      <Area
+                        type="monotone"
+                        dataKey="total"
+                        stroke="#3b82f6"
+                        fillOpacity={1}
+                        fill="url(#fillTotal)"
+                        strokeWidth={3}
+                      />
+                    </AreaChart>
                   </ChartContainer>
                 </div>
               )}
