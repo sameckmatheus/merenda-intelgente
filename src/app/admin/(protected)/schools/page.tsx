@@ -290,17 +290,17 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
         </DialogHeader>
 
         <div className="p-4 border-b bg-white space-y-4 shrink-0">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
+          <div className="flex flex-col gap-4">
+            <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Buscar item..."
-                className="pl-9"
+                className="pl-9 w-full"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide w-full">
               {categories.map(cat => (
                 <Button
                   key={cat}
