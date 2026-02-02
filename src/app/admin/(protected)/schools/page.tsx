@@ -14,24 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-const schoolsList = [
-  "ANEXO MARCOS FREIRE",
-  "BARBAPAPA",
-  "CARLOS AYRES",
-  "DILMA",
-  "FRANCELINA",
-  "GERCINA ALVES",
-  "JOÃO BENTO",
-  "MARCOS FREIRE",
-  "MARIA JOSÉ",
-  "MARIA OLIVEIRA",
-  "MUNDO DA CRIANÇA",
-  "MÃE BELA",
-  "OTACÍLIA",
-  "SABINO",
-  "ZÉLIA",
-  "ZULEIDE",
-];
+import { SCHOOLS_LIST } from "@/lib/constants";
+
+const schoolsList = SCHOOLS_LIST;
+
 
 type SchoolSummary = {
   name: string;

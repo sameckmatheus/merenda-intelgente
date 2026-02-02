@@ -13,24 +13,14 @@ import { Search, Mail, Phone, User as UserIcon, Building2, Plus, Trash2, Save, L
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { User } from "@/lib/types";
+import { SCHOOLS_LIST } from "@/lib/constants";
 
 // Helper to fetch schools for dropdown
 const useSchools = () => {
   const [schools, setSchools] = useState<{ id: string, name: string }[]>([]);
   useEffect(() => {
-    fetch('/api/reports/summary?start=0&end=0') // Hack to get schools list from summary or create dedicated endpoint?
-      // Actually /api/reports/summary returns bySchool with names. 
-      // Better to use /api/schools/settings for list? No, that's single.
-      // Let's assume we can get unique school names from a simple call or just specific endpoint.
-      // Since I don't have a specific "list all schools" endpoint that returns IDs cleanly without heavy load, 
-      // I'll parse from reports summary for now or just hardcode the list used elsewhere if static.
-      // The `users` endpoint was returning schools before.
-      // Let's use the static list from `constants` or similar if available, or just fetch from summary.
-      // Actually, I can add a `list` param to schools api if needed, but let's try to get from summary.
-      .then(res => res.json())
-      .then(data => {
-        if (data.bySchool) setSchools(data.bySchool.map((s: any) => ({ id: s.name, name: s.name })));
-      });
+    // Use the centralized constant list
+    setSchools(SCHOOLS_LIST.map(name => ({ id: name, name })));
   }, []);
   return schools;
 };
