@@ -187,6 +187,26 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
             }
           }
 
+          // AUTO-SEED CHECK
+          // If inventory is empty/small, trigger seed and reload
+          if (globalItems.length < 5) {
+            try {
+              console.log("Detecting empty inventory, auto-seeding...");
+              await fetch('/api/seed-inventory');
+              // Reload global data
+              const reloadRes = await fetch('/api/settings');
+              const reloadData = await reloadRes.json();
+              if (reloadData.settings?.inventoryItems) {
+                globalItems = reloadData.settings.inventoryItems;
+              }
+              if (reloadData.settings?.inventoryCategories) {
+                setCategories(reloadData.settings.inventoryCategories);
+              }
+            } catch (seedErr) {
+              console.error("Auto-seed failed", seedErr);
+            }
+          }
+
           // Parse Local Quantities
           if (schoolData.settings && schoolData.settings.inventory) {
             const localInv = schoolData.settings.inventory as any[];
@@ -289,7 +309,7 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
           </div>
         </DialogHeader>
 
-        <div className="p-4 border-b bg-white space-y-4 shrink-0">
+        <div className="px-6 py-4 border-b bg-white space-y-4 shrink-0">
           <div className="flex flex-col gap-4">
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -320,7 +340,7 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
         </div>
 
         <div className="flex-1 bg-slate-50/50 overflow-y-auto">
-          <div className="p-4 sm:p-6 grid grid-cols-1 gap-3">
+          <div className="p-4 sm:px-6 sm:py-6 grid grid-cols-1 gap-3">
             {filteredItems.map(item => (
               <div key={item.id} className="bg-white p-3 sm:p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between group hover:border-blue-200 transition-colors gap-3">
                 <div className="flex items-center gap-4">
@@ -392,7 +412,7 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
           </div>
         </div>
 
-        <div className="p-4 border-t bg-white flex justify-end gap-3 shrink-0">
+        <div className="px-6 py-4 border-t bg-white flex justify-end gap-3 shrink-0">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]">
             <Save className="w-4 h-4 mr-2" />
@@ -788,7 +808,7 @@ const SchoolDetailsModal = ({ school, isOpen, onClose }: { school: string | null
         </div>
 
         <div className="flex-1 w-full bg-slate-50/50 overflow-y-auto">
-          <div className="flex flex-col p-2 md:p-6 pb-4 gap-2 md:gap-6 w-full max-w-full">
+          <div className="flex flex-col p-4 md:p-6 pb-4 gap-4 md:gap-6 w-full max-w-full">
             {isLoading ? (
               <div className="h-48 flex items-center justify-center text-slate-400">
                 <div className="flex flex-col items-center gap-2">
