@@ -133,7 +133,7 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate, schools }: { user: 
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserIcon className="w-5 h-5 text-blue-600" />

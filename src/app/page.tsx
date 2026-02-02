@@ -601,7 +601,7 @@ export default function Home() {
       </div>
 
       <AlertDialog open={isSuccessAlertOpen} onOpenChange={setIsSuccessAlertOpen}>
-        <AlertDialogContent className="rounded-2xl border-0 shadow-2xl">
+        <AlertDialogContent className="rounded-2xl border-0 shadow-2xl max-h-[85vh] overflow-y-auto">
           <AlertDialogHeader>
             <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
               <CheckCircle2 className="w-6 h-6 text-green-600" />

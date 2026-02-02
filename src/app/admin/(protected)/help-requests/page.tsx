@@ -106,7 +106,7 @@ const RequestDetailsModal = ({ request, isOpen, onClose, onUpdate }: { request: 
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-xl">
+            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         Pedido de Ajuda <Badge variant="secondary">#{request.protocol}</Badge>
