@@ -95,6 +95,8 @@ export async function POST(request: Request) {
 
         if (counts) updateData.counts = counts;
         if (contacts) updateData.contacts = contacts;
+        if (body.inventory) updateData.inventory = body.inventory;
+        if (body.categories) updateData.categories = body.categories;
 
         await db.collection('schools').doc(docId).set(updateData, { merge: true });
 

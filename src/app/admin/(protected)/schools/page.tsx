@@ -133,6 +133,20 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editingCategory, setEditingCategory] = useState<{ original: string, new: string } | null>(null);
 
+  useEffect(() => {
+    if (isOpen && school) {
+      fetch(`/api/schools/settings?school=${encodeURIComponent(school)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.settings) {
+            if (data.settings.inventory) setItems(data.settings.inventory);
+            if (data.settings.categories) setCategories(data.settings.categories);
+          }
+        })
+        .catch(err => console.error("Failed to fetch inventory", err));
+    }
+  }, [isOpen, school]);
+
   const handleQuantityChange = (id: string, delta: number) => {
     setItems(prev => prev.map(item => {
       if (item.id === id) {
@@ -144,17 +158,38 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
     }));
   };
 
+  const handleDeleteItem = (id: string) => {
+    setItems(prev => prev.filter(i => i.id !== id));
+    setChangedItems(prev => new Set(prev).add('deleted')); // Mark as changed to trigger save
+  };
+
   const filteredItems = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "Todos" || item.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const handleSave = () => {
-    // In a real app, this would make an API call
-    console.log("Saving inventory for", school, items.filter(i => changedItems.has(i.id)));
-    setChangedItems(new Set());
-    onClose();
+  const handleSave = async () => {
+    try {
+      const res = await fetch('/api/schools/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schoolName: school,
+          inventory: items,
+          categories: categories
+        })
+      });
+
+      if (!res.ok) throw new Error("Failed to save");
+
+      setChangedItems(new Set());
+      onClose();
+    } catch (e) {
+      console.error("Error saving inventory", e);
+      // Add toast here if available
+      alert("Erro ao salvar estoque.");
+    }
   };
 
   return (
@@ -175,7 +210,7 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
               <Button size="sm" variant="outline" className="gap-2 text-xs" onClick={() => setIsManagingCategories(true)}>
                 <Plus className="w-3 h-3" /> Categoria
               </Button>
-              <Button size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700 text-xs" onClick={() => {
+              <Button size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => {
                 setNewItemData({ category: "Estocáveis", unit: "kg", quantity: 0, minQuantity: 0 });
                 setIsAddingItem(true);
               }}>
@@ -271,6 +306,10 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
                     setIsAddingItem(true);
                   }}>
                     <Pencil className="w-4 h-4" />
+                  </Button>
+
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:text-red-600" onClick={() => handleDeleteItem(item.id)}>
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
@@ -425,7 +464,7 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
                       setCategories(newCats);
                       setNewCategoryName("");
                     }
-                  }} size="icon" className="shrink-0 bg-blue-600 hover:bg-blue-700">
+                  }} size="icon" className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white">
                     <Plus className="w-4 h-4" />
                   </Button>
                 </div>
@@ -434,10 +473,11 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
 
             <div className="flex justify-end pt-2">
               <Button variant="outline" onClick={() => setIsManagingCategories(false)}>Fechar</Button>
+              {/* Add Save button for Categories if needed, or rely on main save? Categories update state immediately. Main save persists. */}
             </div>
-          </DialogContent>
-        </Dialog>
-      </DialogContent>
+          </DialogContent >
+        </Dialog >
+      </DialogContent >
     </Dialog >
   );
 };
