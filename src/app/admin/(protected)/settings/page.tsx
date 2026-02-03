@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { User, Settings, Save, Bell, Shield, Mail } from 'lucide-react';
+import { User, Settings, Save, Bell, Shield, Mail, LogOut } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 // Types
 type SystemSettings = {
@@ -28,6 +29,7 @@ type UserProfile = {
 
 export default function AdminSettings() {
   const { toast } = useToast();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -100,6 +102,12 @@ export default function AdminSettings() {
       title: "Perfil atualizado",
       description: "Suas informações foram salvas localmente.",
     });
+  };
+
+  const handleLogout = async () => {
+    await fetch('/api/logout', { method: 'POST' });
+    router.push('/admin/login');
+    router.refresh();
   };
 
   return (
@@ -243,8 +251,12 @@ export default function AdminSettings() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="border-t bg-slate-50 px-6 py-4">
-              <Button onClick={handleProfileSave} className="ml-auto">
+            <CardFooter className="border-t bg-slate-50 px-6 py-4 flex justify-between">
+              <Button onClick={handleLogout} variant="destructive" className="bg-red-600 hover:bg-red-700">
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair do Sistema
+              </Button>
+              <Button onClick={handleProfileSave} className="bg-blue-600 hover:bg-blue-700 text-white">
                 Salvar Perfil
               </Button>
             </CardFooter>

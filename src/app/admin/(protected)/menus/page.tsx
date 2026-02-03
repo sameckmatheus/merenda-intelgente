@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/admin/admin-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Utensils, Calendar, ChefHat, Search, Plus, FileText, ChevronRight, Share2, Save, X, Trash2 } from 'lucide-react';
+import { Utensils, Calendar, ChefHat, Search, Plus, FileText, ChevronRight, Share2, Save, X, Trash2, Pencil } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 // Types
@@ -208,16 +208,16 @@ const INITIAL_MENUS: Menu[] = [
 ];
 
 const CATEGORY_COLORS = {
-  Regular: "bg-blue-100 text-blue-700 hover:bg-blue-200",
-  Creche: "bg-pink-100 text-pink-700 hover:bg-pink-200",
-  EJA: "bg-purple-100 text-purple-700 hover:bg-purple-200",
-  Integral: "bg-emerald-100 text-emerald-700 hover:bg-emerald-200",
+  Regular: "bg-blue-600 text-white shadow-md shadow-blue-600/20",
+  Creche: "bg-pink-600 text-white shadow-md shadow-pink-600/20",
+  EJA: "bg-purple-600 text-white shadow-md shadow-purple-600/20",
+  Integral: "bg-emerald-600 text-white shadow-md shadow-emerald-600/20",
 };
 
 const STATUS_MAP = {
-  active: { label: "Em Vigor", class: "bg-emerald-500", text: "text-emerald-700 bg-emerald-50 border-emerald-200" },
-  draft: { label: "Rascunho", class: "bg-amber-500", text: "text-amber-700 bg-amber-50 border-amber-200" },
-  archived: { label: "Arquivado", class: "bg-slate-500", text: "text-slate-700 bg-slate-50 border-slate-200" },
+  active: { label: "Em Vigor", class: "bg-green-500", text: "bg-green-600 text-white border-green-700 shadow-md shadow-green-600/20" },
+  draft: { label: "Rascunho", class: "bg-amber-400", text: "bg-amber-500 text-white border-amber-600 shadow-md shadow-amber-500/20" },
+  archived: { label: "Arquivado", class: "bg-slate-400", text: "bg-slate-600 text-white border-slate-700 shadow-md shadow-slate-600/20" },
 };
 
 const CARD_GRADIENTS = [
@@ -227,55 +227,66 @@ const CARD_GRADIENTS = [
 ];
 
 // Components
-const MenuCard = ({ menu, onClick, index }: { menu: Menu, onClick: () => void, index: number }) => {
+// Components
+const MenuCard = ({ menu, onClick, onEdit, onDelete }: { menu: Menu, onClick: () => void, onEdit: (e: React.MouseEvent) => void, onDelete: (e: React.MouseEvent) => void }) => {
   const status = STATUS_MAP[menu.status];
-  const gradient = CARD_GRADIENTS[index % CARD_GRADIENTS.length];
 
   return (
     <Card
-      className={cn(
-        "group cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border-0 bg-gradient-to-br",
-        gradient
-      )}
+      className="group cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl border border-slate-200 bg-white"
       onClick={onClick}
     >
       <CardHeader className="pb-3">
-        <div className="flex justify-between items-start mb-2">
-          <Badge className={cn("font-medium border-0", CATEGORY_COLORS[menu.category])}>
+        <div className="flex justify-between items-center mb-3">
+          <Badge className={cn("font-bold px-3 py-1 border-0 rounded-xl", CATEGORY_COLORS[menu.category])}>
             {menu.category}
           </Badge>
-          <div className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1.5", status.text)}>
-            <div className={cn("w-1.5 h-1.5 rounded-full", status.class)} />
+          <div className={cn("px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1.5", status.text)}>
+            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
             {status.label}
           </div>
         </div>
-        <CardTitle className="text-lg font-bold text-slate-800 leading-tight group-hover:text-blue-600 transition-colors">
+        <CardTitle className="text-xl font-bold text-slate-800 leading-tight">
           {menu.title}
         </CardTitle>
-        <CardDescription className="flex items-center gap-2 mt-1">
-          <Calendar className="w-3 h-3" />
+        <CardDescription className="flex items-center gap-2 mt-2 text-slate-500 font-medium text-sm">
+          <Calendar className="w-4 h-4 text-slate-400" />
           {new Date(menu.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} - {new Date(menu.endDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center gap-4 text-sm text-slate-500">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center gap-4 text-sm text-slate-600 font-medium">
+          <div className="flex items-center gap-1.5">
             <Utensils className="w-4 h-4 text-slate-400" />
             <span>{menu.items.length > 0 ? `${menu.items.length} dias` : 'Sem itens'}</span>
           </div>
           {menu.category === 'Regular' && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <ChefHat className="w-4 h-4 text-slate-400" />
               <span>Padrão Seduc</span>
             </div>
           )}
         </div>
       </CardContent>
-      <CardFooter className="pt-0 pb-4">
-        <div className="w-full flex items-center justify-between text-xs font-medium text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
-          <span>Visualizar cardápio</span>
-          <ChevronRight className="w-4 h-4" />
-        </div>
+      <CardFooter className="pt-0 pb-4 flex justify-between gap-2 border-t px-6 py-4 bg-slate-50/50">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors"
+          onClick={onEdit}
+        >
+          <Pencil className="w-3.5 h-3.5 mr-2" />
+          Editar
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="flex-1 text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-100 border border-transparent transition-colors"
+          onClick={onDelete}
+        >
+          <Trash2 className="w-3.5 h-3.5 mr-2" />
+          Excluir
+        </Button>
       </CardFooter>
     </Card>
   )
@@ -286,7 +297,7 @@ const MenuDetailsSheet = ({ menu, isOpen, onClose }: { menu: Menu | null, isOpen
 
   return (
     <Sheet open={isOpen} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="sm:max-w-xl w-full flex flex-col p-0 bg-slate-50/50 backdrop-blur-3xl">
+      <SheetContent className="sm:max-w-xl w-full flex flex-col p-0 bg-[#eeeeee]">
         <SheetHeader className="p-6 bg-white border-b border-slate-100">
           <div className="flex items-center gap-2 mb-2">
             <Badge className={cn("font-medium border-0", CATEGORY_COLORS[menu.category])}>
@@ -358,7 +369,7 @@ const MenuDetailsSheet = ({ menu, isOpen, onClose }: { menu: Menu | null, isOpen
   )
 }
 
-const CreateMenuModal = ({ isOpen, onClose, onSave }: { isOpen: boolean, onClose: () => void, onSave: (menu: Menu) => void }) => {
+const CreateMenuModal = ({ isOpen, onClose, onSave, menuToEdit }: { isOpen: boolean, onClose: () => void, onSave: (menu: Menu) => void, menuToEdit?: Menu | null }) => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<Partial<Menu>>({
     title: "",
@@ -369,6 +380,41 @@ const CreateMenuModal = ({ isOpen, onClose, onSave }: { isOpen: boolean, onClose
     items: WEEKDAYS.map(day => ({ day, meals: [] }))
   });
 
+  // Load menu data when editing
+  useState(() => {
+    if (menuToEdit) {
+      setFormData(JSON.parse(JSON.stringify(menuToEdit)));
+    } else {
+      setFormData({
+        title: "",
+        category: "Regular",
+        startDate: "",
+        endDate: "",
+        status: "draft",
+        items: WEEKDAYS.map(day => ({ day, meals: [] }))
+      });
+    }
+  });
+
+  // Effect to update form when menuToEdit changes (for reopening modal)
+  useEffect(() => {
+    if (isOpen) {
+      setStep(1);
+      if (menuToEdit) {
+        setFormData(JSON.parse(JSON.stringify(menuToEdit)));
+      } else {
+        setFormData({
+          title: "",
+          category: "Regular",
+          startDate: "",
+          endDate: "",
+          status: "draft",
+          items: WEEKDAYS.map(day => ({ day, meals: [] }))
+        });
+      }
+    }
+  }, [isOpen, menuToEdit]);
+
   const handleBasicInfoChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -376,15 +422,14 @@ const CreateMenuModal = ({ isOpen, onClose, onSave }: { isOpen: boolean, onClose
   const handleMealChange = (dayIndex: number, mealType: string, field: 'description' | 'nutrition', value: string) => {
     const newItems = [...(formData.items || [])];
     const dayItem = newItems[dayIndex];
+    if (!dayItem) return; // Guard clause
+
     const mealIndex = dayItem.meals.findIndex(m => m.type === mealType);
 
     if (mealIndex >= 0) {
       dayItem.meals[mealIndex] = { ...dayItem.meals[mealIndex], [field]: value };
     } else {
-      // If meal type doesn't exist for this day yet, create it.
-      // NOTE: This basic implementation assumes 'description' is usually the first thing typed.
-      // A robust one would handle object creation safely regardless of field.
-      const newMeal = { type: mealType, description: "", nutrition: "" };
+      const newMeal: any = { type: mealType, description: "", nutrition: "" };
       newMeal[field] = value;
       dayItem.meals.push(newMeal);
     }
@@ -398,18 +443,9 @@ const CreateMenuModal = ({ isOpen, onClose, onSave }: { isOpen: boolean, onClose
     if (formData.title && formData.startDate && formData.endDate) {
       onSave({
         ...formData,
-        id: Math.random().toString(36).substr(2, 9),
+        id: menuToEdit ? menuToEdit.id : Math.random().toString(36).substr(2, 9),
       } as Menu);
       onClose();
-      setStep(1); // Reset
-      setFormData({
-        title: "",
-        category: "Regular",
-        startDate: "",
-        endDate: "",
-        status: "draft",
-        items: WEEKDAYS.map(day => ({ day, meals: [] }))
-      });
     }
   };
 
@@ -424,7 +460,7 @@ const CreateMenuModal = ({ isOpen, onClose, onSave }: { isOpen: boolean, onClose
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="p-6 border-b">
           <DialogTitle className="text-xl font-bold">
-            {step === 1 ? "Novo Cardápio - Informações Básicas" : "Planejamento das Refeições"}
+            {step === 1 ? (menuToEdit ? "Editar Cardápio" : "Novo Cardápio") + " - Informações Básicas" : "Planejamento das Refeições"}
           </DialogTitle>
           <DialogDescription>
             {step === 1 ? "Defina o título, categoria e período de vigência." : "Preencha o cardápio para cada dia da semana."}
@@ -566,42 +602,64 @@ export default function AdminMenus() {
   const [menus, setMenus] = useState<Menu[]>(INITIAL_MENUS);
   const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [menuToEdit, setMenuToEdit] = useState<Menu | null>(null);
 
   const filteredMenus = menus.filter(m =>
     m.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     m.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSaveMenu = (newMenu: Menu) => {
-    setMenus([newMenu, ...menus]);
+  const handleSaveMenu = (savedMenu: Menu) => {
+    if (menuToEdit) {
+      // Update existing
+      setMenus(menus.map(m => m.id === savedMenu.id ? savedMenu : m));
+      setMenuToEdit(null);
+    } else {
+      // Create new
+      setMenus([savedMenu, ...menus]);
+    }
   };
 
-  const newAnalysisButton = (
-    <Button
-      variant="default"
-      size="sm"
-      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-600/20 rounded-xl transition-all hover:scale-105 active:scale-95"
-      onClick={() => setIsCreateModalOpen(true)}
-    >
-      <Plus className="w-4 h-4 mr-2" /> Novo Cardápio
-    </Button>
-  );
+  const handleDeleteMenu = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm("Tem certeza que deseja excluir este cardápio?")) {
+      setMenus(menus.filter(m => m.id !== id));
+    }
+  };
+
+  const handleEditMenu = (menu: Menu, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMenuToEdit(menu);
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCreateNew = () => {
+    setMenuToEdit(null);
+    setIsCreateModalOpen(true);
+  }
 
   return (
     <AdminLayout
       title="Gestão de Cardápios"
       description="Planejamento e distribuição da alimentação escolar."
-      actions={newAnalysisButton}
     >
       <div className="space-y-8">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            placeholder="Buscar cardápios..."
-            className="pl-9 bg-white border-slate-200 shadow-sm focus:ring-blue-500"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Buscar cardápios..."
+              className="pl-9 bg-white border-slate-200 shadow-sm focus:ring-blue-500 w-full"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Button
+            onClick={handleCreateNew}
+            className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
+          >
+            <Plus className="w-4 h-4 mr-2" /> Novo Cardápio
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -609,8 +667,9 @@ export default function AdminMenus() {
             <MenuCard
               key={menu.id}
               menu={menu}
-              index={index}
               onClick={() => setSelectedMenu(menu)}
+              onEdit={(e) => handleEditMenu(menu, e)}
+              onDelete={(e) => handleDeleteMenu(menu.id, e)}
             />
           ))}
         </div>
@@ -636,6 +695,7 @@ export default function AdminMenus() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSave={handleSaveMenu}
+        menuToEdit={menuToEdit}
       />
     </AdminLayout>
   );

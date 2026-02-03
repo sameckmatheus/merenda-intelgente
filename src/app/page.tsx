@@ -220,7 +220,7 @@ export default function Home() {
   return (
     <>
       <div className="min-h-screen w-full bg-gradient-to-br from-blue-50 via-white to-indigo-50 pb-20">
-        <header className="sticky top-0 z-10 bg-gradient-to-r from-blue-700 to-indigo-600 shadow-lg shadow-blue-900/10 text-white">
+        <header className="sticky top-0 z-10 bg-[#275fcf] border-b border-[#204ecf] shadow-lg shadow-blue-900/10 text-white">
           <div className="container mx-auto flex h-20 items-center justify-between px-6">
             <div className="flex items-center gap-4">
               <div className="bg-white/10 p-2 rounded-xl backdrop-blur-sm">

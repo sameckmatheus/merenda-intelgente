@@ -6,7 +6,7 @@ import { AdminLayout } from "@/components/admin/admin-layout";
 import { Filters } from "@/components/admin/filters";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, FileText, ShoppingCart, HelpCircle, TrendingUp, TrendingDown, Activity, Calendar as CalendarIcon, AlertTriangle, BarChart, ShoppingBasket } from 'lucide-react';
+import { Download, FileText, ShoppingCart, HelpCircle, TrendingUp, TrendingDown, Activity, Calendar as CalendarIcon, AlertTriangle, BarChart, ShoppingBasket, Printer, RefreshCw, FileDown } from 'lucide-react';
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, AreaChart, Area, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
@@ -364,6 +364,19 @@ export default function AdminReports() {
     document.body.removeChild(link);
   };
 
+  const downloadPDF = () => {
+    // Placeholder for PDF generation - would integrate with a library like jsPDF
+    alert("Funcionalidade de exportação em PDF será implementada em breve!");
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleRefresh = () => {
+    fetchSummary();
+  };
+
   const totalSubmissions = summary.bySchool.reduce((acc, curr) => acc + curr.count, 0);
 
   // Helper for Status Chart
@@ -373,13 +386,23 @@ export default function AdminReports() {
     <AdminLayout
       title="Relatórios"
       description="Visão geral e indicadores de performance."
-      actions={
-        <Button onClick={downloadCSV} variant="outline" size="sm">
-          <Download className="mr-2 h-4 w-4" /> Exportar CSV
-        </Button>
-      }
     >
       <div className="space-y-6">
+        <div className="flex justify-end gap-3 mb-4">
+          <Button onClick={handleRefresh} className="bg-emerald-500 hover:bg-emerald-600 text-white h-11 px-6 rounded-xl">
+            <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
+          </Button>
+          <Button onClick={handlePrint} className="bg-purple-500 hover:bg-purple-600 text-white h-11 px-6 rounded-xl">
+            <Printer className="mr-2 h-4 w-4" /> Imprimir
+          </Button>
+          <Button onClick={downloadPDF} className="bg-orange-500 hover:bg-orange-600 text-white h-11 px-6 rounded-xl">
+            <FileDown className="mr-2 h-4 w-4" /> Exportar PDF
+          </Button>
+          <Button onClick={downloadCSV} className="bg-blue-600 hover:bg-blue-700 text-white h-11 px-6 rounded-xl">
+            <Download className="mr-2 h-4 w-4" /> Exportar CSV
+          </Button>
+        </div>
+
         <Filters
           date={date}
           setDate={setDate}

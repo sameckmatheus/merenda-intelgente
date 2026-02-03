@@ -202,8 +202,8 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate, schools }: { user: 
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} disabled={isLoading}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
+            <Button variant="outline" onClick={onClose} disabled={isLoading} className="text-white bg-red-600 hover:bg-red-700 hover:text-white border-0">Cancelar</Button>
+            <Button onClick={handleSave} disabled={isLoading} className="text-white bg-blue-600 hover:bg-blue-700">
               {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               Salvar
             </Button>
@@ -254,11 +254,11 @@ export default function AdminUsers() {
     >
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-          <div className="relative max-w-md w-full">
+          <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
               placeholder="Buscar usuário..."
-              className="pl-9 bg-white border-slate-200 shadow-sm focus:ring-blue-500"
+              className="pl-9 bg-white border-slate-200 shadow-sm focus:ring-blue-500 w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />

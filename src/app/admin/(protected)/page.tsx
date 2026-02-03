@@ -66,7 +66,7 @@ export default function AdminDashboard() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [schoolDetails, setSchoolDetails] = useState<{ contacts?: { email: string, whatsapp: string } } | null>(null);
-  const [filterType, setFilterType] = useState<'day' | 'week' | 'month'>('day');
+  const [filterType, setFilterType] = useState<'day' | 'week' | 'month' | 'year' | 'custom'>('day');
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -129,11 +129,7 @@ export default function AdminDashboard() {
     fetchSubmissions();
   }, [date, selectedSchool, selectedStatus, toast, filterType]);
 
-  const handleLogout = async () => {
-    await fetch('/api/logout', { method: 'POST' });
-    router.push('/admin/login');
-    router.refresh();
-  };
+
 
   const handleDelete = async (submissionId: string) => {
     setIsDeleting(true);
@@ -268,19 +264,7 @@ export default function AdminDashboard() {
     window.open(`/api/reports/csv?${params.toString()}`, '_blank');
   };
 
-  const headerActions = (
-    <div className="flex items-center gap-2">
-      <Button
-        onClick={handleLogout}
-        variant="default"
-        size="sm"
-        className="bg-gradient-to-r from-red-600 to-red-600 hover:from-red-700 hover:to-magenta-700 text-white shadow-lg shadow-red-600/20 rounded-xl transition-all hover:scale-105 active:scale-95"
-      >
-        <LogOut className="w-4 h-4 mr-2" />
-        Sair
-      </Button>
-    </div>
-  );
+
 
   /* Removed internal KpiCard component to match Reports style directly in KpiCards */
 
@@ -332,7 +316,6 @@ export default function AdminDashboard() {
       <AdminLayout
         title="Dashboard de Acompanhamento"
         description="Visualize os registros de merenda e gere relatórios"
-        actions={headerActions}
       >
         <div className="space-y-8">
           <Filters

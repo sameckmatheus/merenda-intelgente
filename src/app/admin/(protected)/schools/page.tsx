@@ -24,36 +24,23 @@ type SchoolSummary = {
   count: number;
 };
 
-// Cores para os cards das escolas
-const CARD_GRADIENTS = [
-  "from-blue-500/10 to-indigo-500/10 hover:from-blue-500/20 hover:to-indigo-500/20 border-blue-100",
-  "from-purple-500/10 to-pink-500/10 hover:from-purple-500/20 hover:to-pink-500/20 border-purple-100",
-  "from-emerald-500/10 to-teal-500/10 hover:from-emerald-500/20 hover:to-teal-500/20 border-emerald-100",
-  "from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 border-amber-100",
-  "from-cyan-500/10 to-blue-500/10 hover:from-cyan-500/20 hover:to-blue-500/20 border-cyan-100",
-];
+
 
 const SchoolCard = ({ name, count, index, onClick }: { name: string, count: number, index: number, onClick: () => void }) => {
-  const gradient = CARD_GRADIENTS[index % CARD_GRADIENTS.length];
-
   return (
     <Card
-      className={cn(
-        "cursor-pointer transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl border-dashed",
-        "bg-gradient-to-br",
-        gradient
-      )}
+      className="cursor-pointer transition-all duration-300 transform hover:-translate-y-1 bg-white border-slate-200"
       onClick={onClick}
     >
       <CardContent className="p-6 flex flex-col items-center text-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-white shadow-lg flex items-center justify-center mb-2">
-          <GraduationCap className="w-8 h-8 text-slate-700" />
+        <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-2">
+          <GraduationCap className="w-8 h-8 text-blue-600" />
         </div>
         <div>
           <h3 className="font-bold text-lg text-slate-800 line-clamp-1">{name}</h3>
           <p className="text-sm text-slate-500 font-medium">{count} registros</p>
         </div>
-        <Button variant="secondary" className="w-full mt-2 bg-white/50 hover:bg-white text-slate-700">
+        <Button variant="secondary" className="w-full mt-2 bg-blue-50 hover:bg-blue-100 text-blue-700">
           Ver Detalhes
         </Button>
       </CardContent>
@@ -296,8 +283,8 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
         </DialogHeader>
 
         <div className="px-6 py-4 border-b bg-white space-y-4 shrink-0">
-          <div className="flex flex-col gap-4">
-            <div className="relative w-full">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Buscar item..."
@@ -306,7 +293,7 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide w-full">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide w-full sm:w-auto">
               {categories.map(cat => (
                 <Button
                   key={cat}
