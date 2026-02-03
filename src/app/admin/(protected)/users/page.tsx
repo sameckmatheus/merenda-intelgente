@@ -123,7 +123,7 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate, schools }: { user: 
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto sm:rounded-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserIcon className="w-5 h-5 text-blue-600" />
@@ -140,12 +140,13 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate, schools }: { user: 
                 value={formData.name || ''}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ex: João Silva"
+                className="rounded-xl h-12"
               />
             </div>
             <div className="space-y-2">
               <Label>Função</Label>
               <Select value={formData.role} onValueChange={(v: any) => setFormData({ ...formData, role: v })}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl h-12">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent>
@@ -163,6 +164,7 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate, schools }: { user: 
               value={formData.email || ''}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               placeholder="email@exemplo.com"
+              className="rounded-xl h-12"
             />
           </div>
 
@@ -170,7 +172,7 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate, schools }: { user: 
             <div className="space-y-2">
               <Label>Vincular Escola</Label>
               <Select value={formData.schoolId} onValueChange={(v) => setFormData({ ...formData, schoolId: v })}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl h-12">
                   <SelectValue placeholder="Selecione a escola..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -188,22 +190,23 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate, schools }: { user: 
               value={formData.phone || ''}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               placeholder="(00) 00000-0000"
+              className="rounded-xl h-12"
             />
           </div>
         </div>
 
-        <DialogFooter className="flex justify-between sm:justify-between">
-          <div className="flex gap-2">
+        <DialogFooter className="flex justify-between sm:justify-between gap-4">
+          <div className="flex gap-2 w-full">
             {isEditing && (
-              <Button variant="destructive" onClick={handleDelete} disabled={isLoading} className="bg-red-50 text-red-600 hover:bg-red-100 border-none shadow-none">
+              <Button variant="destructive" onClick={handleDelete} disabled={isLoading} className="bg-red-50 text-red-600 hover:bg-red-100 border-none shadow-none rounded-xl h-12">
                 <Trash2 className="w-4 h-4 mr-2" />
                 Excluir
               </Button>
             )}
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} disabled={isLoading} className="text-white bg-red-600 hover:bg-red-700 hover:text-white border-0">Cancelar</Button>
-            <Button onClick={handleSave} disabled={isLoading} className="text-white bg-blue-600 hover:bg-blue-700">
+          <div className="flex gap-3 w-full justify-end">
+            <Button variant="outline" onClick={onClose} disabled={isLoading} className="text-white bg-red-600 hover:bg-red-700 hover:text-white border-0 rounded-xl h-12 px-6">Cancelar</Button>
+            <Button onClick={handleSave} disabled={isLoading} className="text-white bg-blue-600 hover:bg-blue-700 rounded-xl h-12 px-8">
               {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               Salvar
             </Button>
@@ -263,7 +266,7 @@ export default function AdminUsers() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button onClick={() => handleOpenModal(null)} className="bg-blue-600 hover:bg-blue-700 text-white">
+          <Button onClick={() => handleOpenModal(null)} className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Novo Usuário
           </Button>

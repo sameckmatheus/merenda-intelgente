@@ -297,8 +297,15 @@ const MenuDetailsSheet = ({ menu, isOpen, onClose }: { menu: Menu | null, isOpen
 
   return (
     <Sheet open={isOpen} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="sm:max-w-xl w-full flex flex-col p-0 bg-[#eeeeee]">
-        <SheetHeader className="p-6 bg-white border-b border-slate-100">
+      {/* 
+          ADJUSTMENTS: 
+          - top-[5rem]: Positions modal below the 5rem/h-20 header.
+          - h-[calc(100vh-5rem)]: Ensures it explicitly fills only the remaining height, preventing top cutoff.
+          - z-[50]: Lower than header (z-[60]), so header stays accessible/visible if needed (visual hierarchy).
+          - overflow-hidden: Prevents double scrollbars.
+      */}
+      <SheetContent className="top-[5rem] h-[calc(100vh-5rem)] z-[50] sm:max-w-xl w-full flex flex-col p-0 bg-[#eeeeee] border-l shadow-2xl data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right">
+        <SheetHeader className="p-6 bg-white border-b border-slate-100 flex-shrink-0">
           <div className="flex items-center gap-2 mb-2">
             <Badge className={cn("font-medium border-0", CATEGORY_COLORS[menu.category])}>
               {menu.category}
@@ -314,8 +321,9 @@ const MenuDetailsSheet = ({ menu, isOpen, onClose }: { menu: Menu | null, isOpen
           </SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 p-6">
-          <div className="space-y-6">
+        <ScrollArea className="flex-1">
+          {/* Added pb-20 to ensure bottom content isn't cut off by screen edges */}
+          <div className="space-y-6 p-6 pb-20">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Composição Semanal</h3>
               <Button variant="ghost" size="sm" className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
@@ -600,7 +608,11 @@ const CreateMenuModal = ({ isOpen, onClose, onSave, menuToEdit }: { isOpen: bool
 export default function AdminMenus() {
   const [searchTerm, setSearchTerm] = useState("");
   const [menus, setMenus] = useState<Menu[]>(INITIAL_MENUS);
+
+  // Independent state for Sheet to allow animations
   const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [menuToEdit, setMenuToEdit] = useState<Menu | null>(null);
 
@@ -638,6 +650,11 @@ export default function AdminMenus() {
     setIsCreateModalOpen(true);
   }
 
+  const handleViewMenu = (menu: Menu) => {
+    setSelectedMenu(menu);
+    setIsSheetOpen(true);
+  };
+
   return (
     <AdminLayout
       title="Gestão de Cardápios"
@@ -667,7 +684,7 @@ export default function AdminMenus() {
             <MenuCard
               key={menu.id}
               menu={menu}
-              onClick={() => setSelectedMenu(menu)}
+              onClick={() => handleViewMenu(menu)}
               onEdit={(e) => handleEditMenu(menu, e)}
               onDelete={(e) => handleDeleteMenu(menu.id, e)}
             />
@@ -687,8 +704,8 @@ export default function AdminMenus() {
 
       <MenuDetailsSheet
         menu={selectedMenu}
-        isOpen={!!selectedMenu}
-        onClose={() => setSelectedMenu(null)}
+        isOpen={isSheetOpen}
+        onClose={() => setIsSheetOpen(false)}
       />
 
       <CreateMenuModal

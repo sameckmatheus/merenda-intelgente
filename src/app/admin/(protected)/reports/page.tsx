@@ -12,6 +12,9 @@ import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell, L
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+
 
 const schools = [
   "ANEXO MARCOS FREIRE", "BARBAPAPA", "CARLOS AYRES", "DILMA", "FRANCELINA", "GERCINA ALVES",
@@ -352,21 +355,382 @@ export default function AdminReports() {
   }, [fetchSummary]);
 
   const downloadCSV = () => {
-    const headers = ["Escola", "Registros"];
-    const rows = summary.bySchool.map(item => [item.name, item.count]);
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "relatorio_escolas.csv");
+    // Comprehensive headers for decision-making
+    const headers = [
+      "Data",
+      "Escola",
+      "Turno",
+      "Responsável",
+      "Total de Alunos",
+      "Status",
+      "Tipo de Cardápio",
+      "Descrição Cardápio Alternativo",
+      "Suprimentos Recebidos",
+      "Descrição dos Suprimentos",
+      "Precisa de Ajuda",
+      "Itens em Falta",
+      "Pode Comprar Itens",
+      "Itens Comprados",
+      "Observações Gerais"
+    ];
+
+    // Helper function to escape CSV values
+    const escapeCSV = (value: any): string => {
+      if (value === null || value === undefined) return '';
+      const str = String(value);
+      // Escape quotes and wrap in quotes if contains comma, quote, or newline
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    // Map all submissions to CSV rows with complete data
+    const rows = submissionsRaw.map(submission => [
+      escapeCSV(new Date(typeof submission.date === 'number' ? submission.date : submission.date?.toMillis?.() || 0).toLocaleString('pt-BR')),
+      escapeCSV(submission.school || ''),
+      escapeCSV(submission.shift || ''),
+      escapeCSV(submission.respondentName || ''),
+      escapeCSV(submission.studentsCount || ''),
+      escapeCSV(submission.status || 'Pendente'),
+      escapeCSV(
+        submission.menuType === 'planned' ? 'Previsto' :
+          submission.menuType === 'alternative' ? 'Alternativo' : 'Improvisado'
+      ),
+      escapeCSV(submission.alternativeMenuDescription || ''),
+      escapeCSV(submission.suppliesReceived ? 'Sim' : 'Não'),
+      escapeCSV(submission.suppliesDescription || ''),
+      escapeCSV(submission.helpNeeded ? 'Sim' : 'Não'),
+      escapeCSV(submission.missingItems || ''),
+      escapeCSV(submission.canBuyMissingItems !== undefined ? (submission.canBuyMissingItems ? 'Sim' : 'Não') : ''),
+      escapeCSV(submission.itemsPurchased || ''),
+      escapeCSV(submission.observations || '')
+    ]);
+
+    // Add summary section at the top
+    const summaryRows = [
+      ['=== RESUMO EXECUTIVO ==='],
+      ['Total de Registros', submissionsRaw.length],
+      ['Pedidos de Ajuda', submissionsRaw.filter(s => s.helpNeeded).length],
+      ['Compras Emergenciais', submissionsRaw.filter(s => s.itemsPurchased).length],
+      [''],
+      ['=== DADOS DETALHADOS ==='],
+      []
+    ];
+
+    // Combine summary + headers + data rows
+    const csvContent =
+      '\uFEFF' + // UTF-8 BOM for Excel compatibility
+      summaryRows.map(row => row.join(',')).join('\n') + '\n' +
+      headers.join(',') + '\n' +
+      rows.map(row => row.join(',')).join('\n');
+
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    // Generate 8-digit batch code from timestamp (last 8 digits of timestamp)
+    const batchCode = String(Date.now()).slice(-8);
+    const year = new Date().getFullYear();
+    const fileName = `relatório_merendaescolar_${year}_${batchCode}.csv`;
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const downloadPDF = () => {
-    // Placeholder for PDF generation - would integrate with a library like jsPDF
-    alert("Funcionalidade de exportação em PDF será implementada em breve!");
+    const doc = new jsPDF();
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let yPos = 20;
+
+    // Helper function to add page if needed
+    const checkAddPage = (requiredSpace: number) => {
+      if (yPos + requiredSpace > pageHeight - 20) {
+        doc.addPage();
+        yPos = 20;
+        return true;
+      }
+      return false;
+    };
+
+    // HEADER - Beautiful gradient effect using rectangles
+    doc.setFillColor(59, 130, 246); // Blue
+    doc.rect(0, 0, pageWidth, 50, 'F');
+
+    // Title
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Smart Plate - Relatório de Gestão', pageWidth / 2, 20, { align: 'center' });
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Sistema Inteligente de Merenda Escolar', pageWidth / 2, 30, { align: 'center' });
+
+    // Date range
+    const dateStr = filterType === 'custom' && dateRange?.from
+      ? `${new Date(dateRange.from).toLocaleDateString('pt-BR')} - ${dateRange.to ? new Date(dateRange.to).toLocaleDateString('pt-BR') : 'Atual'}`
+      : `Filtro: ${filterType === 'day' ? 'Dia' : filterType === 'week' ? 'Semana' : filterType === 'month' ? 'Mês' : 'Ano'} (${date?.toLocaleDateString('pt-BR') || 'Hoje'})`;
+    doc.text(dateStr, pageWidth / 2, 40, { align: 'center' });
+
+    yPos = 60;
+
+    // EXECUTIVE SUMMARY BOX
+    checkAddPage(40);
+    doc.setFillColor(241, 245, 249); // Light slate background
+    doc.roundedRect(15, yPos, pageWidth - 30, 35, 3, 3, 'F');
+
+    doc.setTextColor(51, 65, 85); // Slate text
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Resumo Executivo', 20, yPos + 8);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const totalRecords = submissionsRaw.length;
+    const totalHelp = submissionsRaw.filter(s => s.helpNeeded).length;
+    const totalPurchased = submissionsRaw.filter(s => s.itemsPurchased).length;
+
+    doc.text(`📊 Total de Registros: ${totalRecords}`, 20, yPos + 18);
+    doc.text(`🆘 Pedidos de Ajuda: ${totalHelp}`, 20, yPos + 26);
+    doc.text(`🛒 Compras Emergenciais: ${totalPurchased}`, 20, yPos + 34);
+
+    yPos += 45;
+
+    // AUTO-GENERATED INSIGHTS
+    checkAddPage(50);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(59, 130, 246); // Blue
+    doc.text('📈 Insights Automáticos', 15, yPos);
+    yPos += 8;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105); // Slate 600
+
+    // Generate insights based on data
+    const insights: string[] = [];
+
+    if (totalHelp > totalRecords * 0.3) {
+      insights.push(`⚠️  Alta demanda: ${((totalHelp / totalRecords) * 100).toFixed(0)}% das escolas solicitaram ajuda.`);
+    } else if (totalHelp === 0) {
+      insights.push(`✅ Excelente: Nenhuma solicitação de ajuda registrada no período.`);
+    }
+
+    if (totalPurchased > 0) {
+      insights.push(`🛒 ${totalPurchased} compras emergenciais realizadas pelas escolas.`);
+    }
+
+    const topSchool = summary.bySchool[0];
+    if (topSchool) {
+      insights.push(`🏆 Escola mais ativa: ${topSchool.name} (${topSchool.count} registros).`);
+    }
+
+    const mostMissingItem = summary.missingItems[0];
+    if (mostMissingItem) {
+      insights.push(`📦 Item mais em falta: ${mostMissingItem.name} (${mostMissingItem.count}x reportado).`);
+    }
+
+    if (summary.byStatus.length > 0) {
+      const pending = summary.byStatus.find(s => s.name === 'pendente');
+      if (pending && pending.value > 0) {
+        insights.push(`⏳ ${pending.value} submissões aguardando atendimento.`);
+      }
+    }
+
+    insights.forEach((insight, idx) => {
+      checkAddPage(8);
+      doc.text(`  • ${insight}`, 15, yPos);
+      yPos += 8;
+    });
+
+    yPos += 5;
+
+    // STATUS DISTRIBUTION
+    checkAddPage(45);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(59, 130, 246);
+    doc.text('📊 Distribuição por Status', 15, yPos);
+    yPos += 10;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+
+    const statusColors = {
+      pendente: [251, 191, 36],
+      atendido: [16, 185, 129],
+      atendido_parcialmente: [59, 130, 246],
+      recusado: [239, 68, 68]
+    };
+
+    summary.byStatus.forEach((status) => {
+      checkAddPage(8);
+      const color = statusColors[status.name as keyof typeof statusColors] || [148, 163, 184];
+      doc.setFillColor(color[0], color[1], color[2]);
+      doc.circle(20, yPos - 2, 2, 'F');
+      doc.setTextColor(71, 85, 105);
+      doc.text(`${status.name}: ${status.value} (${totalRecords > 0 ? ((status.value / totalRecords) * 100).toFixed(1) : 0}%)`, 26, yPos);
+      yPos += 7;
+    });
+
+    yPos += 8;
+
+    // TOP SCHOOLS TABLE
+    checkAddPage(60);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(59, 130, 246);
+    doc.text('🏫 Top 10 Escolas por Registros', 15, yPos);
+    yPos += 8;
+
+    // Create table using autoTable
+    (doc as any).autoTable({
+      startY: yPos,
+      head: [['#', 'Escola', 'Registros', 'Percentual']],
+      body: summary.bySchool.slice(0, 10).map((school, idx) => [
+        (idx + 1).toString(),
+        school.name,
+        school.count.toString(),
+        `${totalRecords > 0 ? ((school.count / totalRecords) * 100).toFixed(1) : 0}%`
+      ]),
+      theme: 'striped',
+      headStyles: {
+        fillColor: [59, 130, 246],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 10
+      },
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+        textColor: [71, 85, 105]
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252]
+      },
+      margin: { left: 15, right: 15 }
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 15;
+
+    // MISSING ITEMS TABLE
+    if (summary.missingItems.length > 0) {
+      checkAddPage(60);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(239, 68, 68); // Red for attention
+      doc.text('⚠️  Itens em Falta', 15, yPos);
+      yPos += 8;
+
+      (doc as any).autoTable({
+        startY: yPos,
+        head: [['Item', 'Reportado', 'Prioridade']],
+        body: summary.missingItems.slice(0, 10).map((item) => {
+          const priority = item.count >= 10 ? 'Alta' : item.count >= 5 ? 'Média' : 'Baixa';
+          return [
+            item.name,
+            `${item.count}x`,
+            priority
+          ];
+        }),
+        theme: 'striped',
+        headStyles: {
+          fillColor: [239, 68, 68],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 10
+        },
+        styles: {
+          fontSize: 9,
+          cellPadding: 3,
+          textColor: [71, 85, 105]
+        },
+        alternateRowStyles: {
+          fillColor: [254, 242, 242]
+        },
+        columnStyles: {
+          2: {
+            cellWidth: 30,
+            halign: 'center',
+            fontStyle: 'bold'
+          }
+        },
+        margin: { left: 15, right: 15 }
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+    }
+
+    // RECENT ACTIVITY
+    if (submissionsRaw.length > 0) {
+      checkAddPage(60);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(59, 130, 246);
+      doc.text('📋 Atividades Recentes', 15, yPos);
+      yPos += 8;
+
+      (doc as any).autoTable({
+        startY: yPos,
+        head: [['Data', 'Escola', 'Turno', 'Responsável', 'Status']],
+        body: submissionsRaw.slice(0, 10).map((s) => [
+          new Date(typeof s.date === 'number' ? s.date : s.date?.toMillis?.() || 0).toLocaleDateString('pt-BR'),
+          s.school.length > 25 ? s.school.substring(0, 22) + '...' : s.school,
+          s.shift || '-',
+          s.respondentName || '-',
+          s.status || 'Pendente'
+        ]),
+        theme: 'grid',
+        headStyles: {
+          fillColor: [59, 130, 246],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 9
+        },
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+          textColor: [71, 85, 105]
+        },
+        margin: { left: 15, right: 15 },
+        columnStyles: {
+          0: { cellWidth: 25 },
+          2: { cellWidth: 20 },
+          4: { cellWidth: 30 }
+        }
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // FOOTER
+    const totalPages = doc.internal.pages.length - 1;
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(
+        `Gerado em ${new Date().toLocaleString('pt-BR')} | Página ${i} de ${totalPages}`,
+        pageWidth / 2,
+        pageHeight - 10,
+        { align: 'center' }
+      );
+      doc.text('Smart Plate © 2026', 15, pageHeight - 10);
+    }
+
+    // Save the PDF
+    const fileName = `relatorio_smart_plate_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
   };
 
   const handlePrint = () => {
@@ -388,17 +752,17 @@ export default function AdminReports() {
       description="Visão geral e indicadores de performance."
     >
       <div className="space-y-6">
-        <div className="flex justify-end gap-3 mb-4">
-          <Button onClick={handleRefresh} className="bg-emerald-500 hover:bg-emerald-600 text-white h-11 px-6 rounded-xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Button onClick={handleRefresh} className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-6 rounded-2xl w-full shadow-sm hover:shadow-md transition-all">
             <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
           </Button>
-          <Button onClick={handlePrint} className="bg-purple-500 hover:bg-purple-600 text-white h-11 px-6 rounded-xl">
+          <Button onClick={handlePrint} className="bg-cyan-600 hover:bg-cyan-700 text-white h-12 px-6 rounded-2xl w-full shadow-sm hover:shadow-md transition-all">
             <Printer className="mr-2 h-4 w-4" /> Imprimir
           </Button>
-          <Button onClick={downloadPDF} className="bg-orange-500 hover:bg-orange-600 text-white h-11 px-6 rounded-xl">
+          <Button onClick={downloadPDF} className="bg-red-600 hover:bg-red-700 text-white h-12 px-6 rounded-2xl w-full shadow-sm hover:shadow-md transition-all">
             <FileDown className="mr-2 h-4 w-4" /> Exportar PDF
           </Button>
-          <Button onClick={downloadCSV} className="bg-blue-600 hover:bg-blue-700 text-white h-11 px-6 rounded-xl">
+          <Button onClick={downloadCSV} className="bg-green-600 hover:bg-green-700 text-white h-12 px-6 rounded-2xl w-full shadow-sm hover:shadow-md transition-all">
             <Download className="mr-2 h-4 w-4" /> Exportar CSV
           </Button>
         </div>

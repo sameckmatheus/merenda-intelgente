@@ -197,8 +197,8 @@ export default function AdminSettings() {
 
             </CardContent>
             <CardFooter className="border-t bg-slate-50 px-6 py-4">
-              <Button onClick={handleSystemSave} disabled={isSaving || isLoading} className="ml-auto bg-blue-600 hover:bg-blue-700 text-white">
-                {isSaving ? "Salvando..." : <><Save className="w-4 h-4 mr-2" /> Salvar Alterações</>}
+              <Button onClick={handleSystemSave} disabled={isSaving || isLoading} className="w-full sm:w-auto sm:ml-auto bg-blue-600 hover:bg-blue-700 text-white block">
+                {isSaving ? "Salvando..." : <><Save className="w-4 h-4 mr-2 inline-block" /> Salvar Alterações</>}
               </Button>
             </CardFooter>
           </Card>
@@ -251,12 +251,12 @@ export default function AdminSettings() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="border-t bg-slate-50 px-6 py-4 flex justify-between">
-              <Button onClick={handleLogout} variant="destructive" className="bg-red-600 hover:bg-red-700">
+            <CardFooter className="border-t bg-slate-50 px-6 py-4 flex flex-col sm:flex-row justify-between gap-4">
+              <Button onClick={handleLogout} variant="destructive" className="bg-red-600 hover:bg-red-700 w-full sm:w-auto">
                 <LogOut className="w-4 h-4 mr-2" />
                 Sair do Sistema
               </Button>
-              <Button onClick={handleProfileSave} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button onClick={handleProfileSave} className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto">
                 Salvar Perfil
               </Button>
             </CardFooter>

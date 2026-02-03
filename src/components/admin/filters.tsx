@@ -94,7 +94,7 @@ export function Filters({
             <div className="flex flex-col gap-2">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal bg-slate-50 border-slate-200 hover:bg-slate-100 transition-colors h-11", !date && !dateRange && "text-slate-500")}>
+                  <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal bg-slate-50 border-slate-200 hover:bg-slate-100 transition-colors h-11 rounded-2xl", !date && !dateRange && "text-slate-500")}>
                     <CalendarIcon className="mr-2 h-4 w-4 text-slate-500" />
                     <span>{getPeriodLabel()}</span>
                   </Button>
@@ -118,10 +118,10 @@ export function Filters({
                 </PopoverContent>
               </Popover>
 
-              <div className="flex bg-slate-100 p-1 rounded-lg">
-                <Button variant="ghost" size="sm" className={cn("flex-1 text-xs h-7 rounded-md", filterType === 'day' && "bg-white text-blue-600 shadow-sm font-medium")} onClick={() => safeSetFilterType('day')}>Dia</Button>
-                <Button variant="ghost" size="sm" className={cn("flex-1 text-xs h-7 rounded-md", filterType === 'week' && "bg-white text-blue-600 shadow-sm font-medium")} onClick={() => safeSetFilterType('week')}>Semana</Button>
-                <Button variant="ghost" size="sm" className={cn("flex-1 text-xs h-7 rounded-md", filterType === 'month' && "bg-white text-blue-600 shadow-sm font-medium")} onClick={() => safeSetFilterType('month')}>Mês</Button>
+              <div className="flex bg-slate-100 p-1 rounded-2xl">
+                <Button variant="ghost" size="sm" className={cn("flex-1 text-xs h-9 rounded-xl", filterType === 'day' && "bg-white text-blue-600 shadow-sm font-medium")} onClick={() => safeSetFilterType('day')}>Dia</Button>
+                <Button variant="ghost" size="sm" className={cn("flex-1 text-xs h-9 rounded-xl", filterType === 'week' && "bg-white text-blue-600 shadow-sm font-medium")} onClick={() => safeSetFilterType('week')}>Semana</Button>
+                <Button variant="ghost" size="sm" className={cn("flex-1 text-xs h-9 rounded-xl", filterType === 'month' && "bg-white text-blue-600 shadow-sm font-medium")} onClick={() => safeSetFilterType('month')}>Mês</Button>
               </div>
             </div>
           </div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { menuItems } from "@/components/admin/sidebar";
@@ -37,10 +37,11 @@ export function AdminLayout({
   actions,
 }: Omit<AdminLayoutProps, "date" | "setDate" | "filterType" | "setFilterType" | "selectedSchool" | "setSelectedSchool" | "selectedStatus" | "setSelectedStatus" | "helpNeededFilter" | "setHelpNeededFilter" | "schools" | "statusTranslations">) {
   const pathname = usePathname();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-screen w-full bg-background">
-      <header className="sticky top-0 z-50 w-full border-b border-[#204ecf] bg-[#275fcf]">
+      <header className="sticky top-0 z-[60] w-full border-b border-[#204ecf] bg-[#275fcf]">
         <div className="w-full px-4 md:px-8 h-20 flex items-center relative">
 
           <div className="flex items-center shrink-0">
@@ -75,25 +76,35 @@ export function AdminLayout({
               })}
             </nav>
 
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="lg:hidden text-white hover:bg-blue-700" aria-label="Abrir menu">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-0">
-                <SheetHeader className="px-4 py-3 border-b">
+            {/* Controlled Sheet for Mobile Sidebar */}
+            <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+              {/* No Trigger here, controlled externally by the button below */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden rounded-full bg-white text-[#275fcf] hover:bg-blue-50 shadow-sm shrink-0 relative z-[61] transition-all duration-300 transform"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                aria-label={isSidebarOpen ? "Fechar menu" : "Abrir menu"}
+              >
+                <div className={cn("transition-transform duration-300", isSidebarOpen ? "rotate-90 scale-100" : "rotate-0 scale-100")}>
+                  {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </div>
+              </Button>
+
+              <SheetContent side="left" className="w-72 p-0 top-[5rem] h-[calc(100vh-5rem)] border-r z-[55] data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left"> {/* Add pt-20 to clear header if needed or let overlay cover content behind */}
+                <SheetHeader className="px-4 py-3 border-b hidden"> {/* Hide Header as branding is in main header */}
                   <SheetTitle className="text-left flex items-center gap-2">
                     <span className="font-bold text-blue-900">Smart Plate</span>
                   </SheetTitle>
                 </SheetHeader>
-                <nav className="space-y-2 p-4">
+                <nav className="space-y-2 p-4 mt-6"> {/* Add margin-top since we might be behind header */}
                   {menuItems.map((item) => {
                     const isActive = pathname === item.href;
                     return (
                       <Link
                         key={item.href}
                         href={item.href}
+                        onClick={() => setIsSidebarOpen(false)} // Close on navigate
                         className={cn(
                           "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-blue-50 hover:text-blue-900",
                           isActive ? "bg-blue-50 text-blue-900 font-medium" : "text-slate-600"

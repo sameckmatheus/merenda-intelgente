@@ -5,42 +5,76 @@ import { AdminLayout } from "@/components/admin/admin-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { GraduationCap, Users, Clock, Calendar, Search, Award, BarChart, Package, Check, AlertCircle, Plus, Minus, Filter, Save, X, Pencil, Trash2 } from 'lucide-react';
+import { GraduationCap, Users, Clock, Calendar, Search, Award, BarChart, Package, Check, AlertCircle, Plus, Minus, Filter, Save, X, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
-import { SCHOOLS_LIST } from "@/lib/constants";
-
-const schoolsList = SCHOOLS_LIST;
-
+// Removed SCHOOLS_LIST import dependency for Main Page usage, but keeps it for fallback elsewhere if needed.
+// Actually we will fetch from API.
 
 type SchoolSummary = {
   name: string;
   count: number;
 };
 
+interface School {
+  id: string;
+  name: string;
+}
 
-
-const SchoolCard = ({ name, count, index, onClick }: { name: string, count: number, index: number, onClick: () => void }) => {
+const SchoolCard = ({
+  school,
+  count,
+  index,
+  onClick,
+  onEdit,
+  onDelete
+}: {
+  school: School,
+  count: number,
+  index: number,
+  onClick: () => void,
+  onEdit: (e: React.MouseEvent) => void,
+  onDelete: (e: React.MouseEvent) => void
+}) => {
   return (
     <Card
-      className="cursor-pointer transition-all duration-300 transform hover:-translate-y-1 bg-white border-slate-200"
+      className="group cursor-pointer transition-all duration-300 transform hover:-translate-y-1 bg-white border-slate-200 hover:border-blue-300 hover:shadow-lg relative overflow-hidden"
       onClick={onClick}
     >
+      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 bg-white/80 hover:bg-white text-slate-400 hover:text-blue-600 rounded-full shadow-sm"
+          onClick={onEdit}
+        >
+          <Pencil className="w-4 h-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 bg-white/80 hover:bg-white text-slate-400 hover:text-red-600 rounded-full shadow-sm"
+          onClick={onDelete}
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
+
       <CardContent className="p-6 flex flex-col items-center text-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-2">
+        <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-2 group-hover:bg-blue-100 transition-colors">
           <GraduationCap className="w-8 h-8 text-blue-600" />
         </div>
         <div>
-          <h3 className="font-bold text-lg text-slate-800 line-clamp-1">{name}</h3>
-          <p className="text-sm text-slate-500 font-medium">{count} registros</p>
+          <h3 className="font-bold text-lg text-slate-800 line-clamp-2 leading-tight min-h-[3rem] flex items-center justify-center">{school.name}</h3>
+          <p className="text-sm text-slate-500 font-medium mt-1">{count} registros</p>
         </div>
-        <Button variant="secondary" className="w-full mt-2 bg-blue-50 hover:bg-blue-100 text-blue-700">
+        <Button variant="secondary" className="w-full mt-2 bg-slate-50 hover:bg-blue-600 hover:text-white text-slate-700 transition-colors">
           Ver Detalhes
         </Button>
       </CardContent>
@@ -90,6 +124,96 @@ const INITIAL_INVENTORY: InventoryItem[] = [
   { id: "23", name: "Vinagre", category: "Outros", quantity: 10, unit: "L", minQuantity: 2 },
   { id: "24", name: "Colorau / Temperos", category: "Outros", quantity: 5, unit: "kg", minQuantity: 1 },
 ];
+
+
+const SchoolFormModal = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  schoolToEdit
+}: {
+  isOpen: boolean,
+  onClose: () => void,
+  onSuccess: () => void,
+  schoolToEdit?: School | null
+}) => {
+  const [name, setName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setName(schoolToEdit?.name || "");
+    }
+  }, [isOpen, schoolToEdit]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    setIsLoading(true);
+    try {
+      const url = '/api/schools';
+      const method = schoolToEdit ? 'PUT' : 'POST';
+      const body = schoolToEdit
+        ? JSON.stringify({ id: schoolToEdit.id, name: name.trim() })
+        : JSON.stringify({ name: name.trim() });
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to save");
+      }
+
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error("Error saving school:", error);
+      alert("Erro ao salvar escola. Verifique se já existe.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{schoolToEdit ? "Editar Escola" : "Nova Escola"}</DialogTitle>
+          <DialogDescription>
+            {schoolToEdit ? "Atualize o nome da unidade escolar." : "Cadastre uma nova unidade escolar no sistema."}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="school-name">Nome da Escola</Label>
+            <Input
+              id="school-name"
+              placeholder="Ex: Escola Municipal..."
+              value={name}
+              onChange={(e) => setName(e.target.value.toUpperCase())}
+              className="uppercase"
+              required
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+              Cancelar
+            </Button>
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white" disabled={isLoading}>
+              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isOpen: boolean, onClose: () => void }) => {
   const [items, setItems] = useState<InventoryItem[]>(INITIAL_INVENTORY);
@@ -258,42 +382,45 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-white rounded-2xl border-none outline-none shadow-xl">
         <DialogHeader className="p-6 border-b bg-white shrink-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-800">
-                <Package className="w-5 h-5 text-blue-600" />
-                Controle de Estoque - {school}
-              </DialogTitle>
-              <DialogDescription className="mt-1">
-                Gerencie os itens disponíveis na despensa da escola.
-              </DialogDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" className="gap-2 text-xs" onClick={() => setIsManagingCategories(true)}>
-                <Plus className="w-3 h-3" /> Categoria
-              </Button>
-              <Button size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => {
-                setNewItemData({ category: "Estocáveis", unit: "kg", quantity: 0, minQuantity: 0 });
-                setIsAddingItem(true);
-              }}>
-                <Plus className="w-3 h-3" /> Item
-              </Button>
-            </div>
+          <div className="flex flex-col gap-2">
+            <DialogTitle className="flex items-start sm:items-center gap-2 text-xl font-bold text-slate-800 leading-tight">
+              <Package className="w-5 h-5 text-blue-600 shrink-0 mt-1 sm:mt-0" />
+              <span className="break-words">Controle de Estoque - {school}</span>
+            </DialogTitle>
+            <DialogDescription>
+              Gerencie os itens disponíveis na despensa da escola.
+            </DialogDescription>
           </div>
         </DialogHeader>
 
-        <div className="px-6 py-4 border-b bg-white space-y-4 shrink-0">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <Input
-                placeholder="Buscar item..."
-                className="pl-9 w-full"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide w-full sm:w-auto">
+        <div className="px-6 py-4 border-b bg-white flex flex-col gap-4 shrink-0">
+          {/* 1. Search Bar */}
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Buscar item..."
+              className="pl-9 w-full bg-slate-50 border-slate-200"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* 2. Action Buttons */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+            <Button size="sm" variant="outline" className="w-full gap-2 border-dashed border-slate-300 hover:border-slate-400 text-slate-600" onClick={() => setIsManagingCategories(true)}>
+              <Plus className="w-4 h-4" /> Gerenciar Categorias
+            </Button>
+            <Button size="sm" className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => {
+              setNewItemData({ category: "Estocáveis", unit: "kg", quantity: 0, minQuantity: 0 });
+              setIsAddingItem(true);
+            }}>
+              <Plus className="w-4 h-4" /> Novo Item
+            </Button>
+          </div>
+
+          {/* 3. Categories */}
+          <div className="w-full overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex gap-2">
               {categories.map(cat => (
                 <Button
                   key={cat}
@@ -1003,10 +1130,39 @@ const normalizeString = (str: string) => {
 
 export default function AdminSchools() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [schools, setSchools] = useState<School[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [schoolSummaries, setSchoolSummaries] = useState<SchoolSummary[]>([]);
-  const [selectedSchool, setSelectedSchool] = useState<string | null>(null);
+
+  // Selection for Details Modal
+  const [selectedSchoolName, setSelectedSchoolName] = useState<string | null>(null);
+
+  // Edit/Create Modal State
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingSchool, setEditingSchool] = useState<School | null>(null);
+
+  // Deletion State
+  const [schoolToDelete, setSchoolToDelete] = useState<School | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const fetchSchools = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/schools');
+      const data = await res.json();
+      if (data.schools) {
+        setSchools(data.schools);
+      }
+    } catch (e) {
+      console.error("Failed to fetch schools", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
+    fetchSchools();
+
     // Fetch summary to populate card counts
     fetch('/api/reports/summary?start=0&end=9999999999999')
       .then(res => res.json())
@@ -1019,11 +1175,50 @@ export default function AdminSchools() {
   }, []);
 
   const getCount = (name: string) => {
-    const target = normalizeString(name);
-    return schoolSummaries.find(s => normalizeString(s.name) === target)?.count || 0;
+    // normalized matching
+    const target = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    return schoolSummaries.find(s => s.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() === target)?.count || 0;
   };
 
-  const filteredSchools = schoolsList.filter(s => s.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredSchools = schools.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  const handleCreateNew = () => {
+    setEditingSchool(null);
+    setIsFormOpen(true);
+  };
+
+  const handleEdit = (school: School) => {
+    setEditingSchool(school);
+    setIsFormOpen(true);
+  };
+
+  const handleDeleteClick = (school: School) => {
+    setSchoolToDelete(school);
+  };
+
+  const confirmDelete = async () => {
+    if (!schoolToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await fetch('/api/schools', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: schoolToDelete.id })
+      });
+      await fetchSchools();
+      setSchoolToDelete(null);
+    } catch (e) {
+      console.error("Failed to delete", e);
+      alert("Erro ao excluir escola.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleSuccess = () => {
+    fetchSchools();
+  };
 
   return (
     <AdminLayout
@@ -1031,41 +1226,87 @@ export default function AdminSchools() {
       description="Gerenciamento e monitoramento individual das unidades escolares."
     >
       <div className="space-y-8">
-        {/* Search Bar */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            placeholder="Buscar escola..."
-            className="pl-9 bg-white border-slate-200 shadow-sm focus:ring-blue-500"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        {/* Search Bar and Actions */}
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Buscar escola..."
+              className="pl-9 bg-white border-slate-200 shadow-sm focus:ring-blue-500 w-full"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button
+              onClick={handleCreateNew}
+              className="bg-blue-600 hover:bg-blue-700 text-white shrink-0 w-full sm:w-auto"
+            >
+              <Plus className="w-4 h-4 mr-2" /> Nova Escola
+            </Button>
+          </div>
         </div>
 
         {/* Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {filteredSchools.map((school, index) => (
-            <SchoolCard
-              key={school}
-              name={school}
-              count={getCount(school)}
-              index={index}
-              onClick={() => setSelectedSchool(school)}
-            />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {filteredSchools.map((school, index) => (
+              <SchoolCard
+                key={school.id}
+                school={school}
+                count={getCount(school.name)}
+                index={index}
+                onClick={() => setSelectedSchoolName(school.name)}
+                onEdit={(e) => { e.stopPropagation(); handleEdit(school); }}
+                onDelete={(e) => { e.stopPropagation(); handleDeleteClick(school); }}
+              />
+            ))}
+          </div>
+        )}
 
-        {filteredSchools.length === 0 && (
+        {!isLoading && filteredSchools.length === 0 && (
           <div className="text-center py-12 text-slate-400">
-            Nenhuma escola encontrada com "{searchTerm}".
+            {searchTerm ? `Nenhuma escola encontrada com "${searchTerm}".` : "Nenhuma escola cadastrada."}
           </div>
         )}
 
         <SchoolDetailsModal
-          school={selectedSchool}
-          isOpen={!!selectedSchool}
-          onClose={() => setSelectedSchool(null)}
+          school={selectedSchoolName}
+          isOpen={!!selectedSchoolName}
+          onClose={() => setSelectedSchoolName(null)}
         />
+
+        <SchoolFormModal
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          onSuccess={handleSuccess}
+          schoolToEdit={editingSchool}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={!!schoolToDelete} onOpenChange={(open) => !open && setSchoolToDelete(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Excluir Escola</DialogTitle>
+              <DialogDescription>
+                Tem certeza que deseja excluir <b>{schoolToDelete?.name}</b>?<br />
+                Esta ação removerá todos os registros e histórico associados permanentemente.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSchoolToDelete(null)} disabled={isDeleting}>Cancelar</Button>
+              <Button variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
+                {isDeleting ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Trash2 className="w-3 h-3 mr-2" />}
+                Excluir
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </AdminLayout>
   );
