@@ -46,10 +46,15 @@ export async function middleware(request: NextRequest) {
   // is handled client-side in each page through Firebase auth checks
   // This is because verifying JWT in middleware is expensive and slow
 
+  // Redirect root to login
+  if (pathname === '/') {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  // Execute the middleware on admin and school routes, and login pages
-  matcher: ['/admin/:path*', '/escola/:path*', '/login', '/admin/login'],
+  // Execute the middleware on admin and school routes, login pages, and root
+  matcher: ['/', '/admin/:path*', '/escola/:path*', '/login', '/admin/login'],
 };

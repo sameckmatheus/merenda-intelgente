@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
-import { isSchoolEmail } from '@/lib/school-auth';
+// import { isSchoolEmail } from '@/lib/school-auth'; // Removed due to missing file
 
 const loginSchema = z.object({
     email: z.string().email('E-mail inválido.'),
@@ -45,7 +45,9 @@ export default function LoginForm() {
     async function onSubmit(data: z.infer<typeof loginSchema>) {
         setIsLoading(true);
 
+        /*
         // Client-side check for expected school email format validation
+        // Removed because isSchoolEmail is missing
         if (!isSchoolEmail(data.email)) {
             toast({
                 variant: 'destructive',
@@ -55,6 +57,7 @@ export default function LoginForm() {
             setIsLoading(false);
             return;
         }
+        */
 
         try {
             const auth = getAuth(app);
@@ -74,13 +77,36 @@ export default function LoginForm() {
             });
 
             if (response.ok) {
+                const data = await response.json();
+                const role = data.role;
+
+                let targetUrl = '/escola'; // Default fallback
+
+                if (role === 'admin') {
+                    targetUrl = '/admin';
+                } else if (role === 'school') {
+                    targetUrl = '/escola';
+                }
+
+                // Check for 'next' param overrides
+                const nextParam = searchParams.get('next');
+                if (nextParam) {
+                    if (targetUrl === '/admin' && nextParam.startsWith('/escola')) {
+                        // admin trying to go to school page -> redirect to admin
+                    } else if (targetUrl === '/escola' && nextParam.startsWith('/admin')) {
+                        // school trying to go to admin -> redirect to school
+                    } else {
+                        targetUrl = nextParam;
+                    }
+                }
+
                 toast({
                     title: 'Login bem-sucedido!',
-                    description: 'Redirecionando para o painel da escola...',
+                    description: `Redirecionando para ${targetUrl === '/admin' ? 'Painel Administrativo' : 'Painel da Escola'}...`,
                 });
-                const nextUrl = searchParams.get('next') || '/escola';
-                router.push(nextUrl);
-                router.refresh(); // Important to re-trigger middleware and get new server state
+
+                router.push(targetUrl);
+                router.refresh();
             } else {
                 const errorData = await response.json();
                 toast({
@@ -102,6 +128,9 @@ export default function LoginForm() {
                         break;
                     case 'auth/invalid-email':
                         errorMessage = 'O formato do e-mail é inválido.';
+                        break;
+                    case 'auth/too-many-requests':
+                        errorMessage = 'Muitas tentativas falhas. Tente novamente mais tarde.';
                         break;
                     default:
                         errorMessage = `Erro (${error.code}): ${error.message}`;

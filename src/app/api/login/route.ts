@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 import { initAdmin, isFirebaseAdminInitialized } from '@/lib/firebase-admin';
 import { AUTH_COOKIE_NAME } from '@/lib/constants';
 
@@ -21,14 +22,24 @@ export async function POST(request: Request) {
   try {
     const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
     let sessionCookie;
+    let uid;
 
     if (!isFirebaseAdminInitialized() && process.env.NODE_ENV === 'development') {
       console.warn('⚠️ Firebase Admin not initialized. Bypassing auth for development.');
       sessionCookie = 'DEV_TOKEN_BYPASS';
+      // For dev bypass, we can't easily get UID unless we decode token manually or trust input.
+      // But usually this branch is only for very early dev. 
+      // Let's assume we can verify token even if not fully initialized? No.
+      // We will skip role check in this specific dev bypass branch or mock it.
+      uid = 'dev-user';
     } else {
+      // Create cookie
       sessionCookie = await getAuth().createSessionCookie(idToken, {
         expiresIn,
       });
+      // Verify token to get UID for role check
+      const decodedToken = await getAuth().verifyIdToken(idToken);
+      uid = decodedToken.uid;
     }
 
     const cookieStore = await cookies();
@@ -39,7 +50,23 @@ export async function POST(request: Request) {
       maxAge: expiresIn / 1000,
     });
 
-    return NextResponse.json({ success: true });
+    // Fetch user role
+    let role = 'school';
+    if (uid && isFirebaseAdminInitialized()) {
+      try {
+        const db = getFirestore();
+        const userDoc = await db.collection('users').doc(uid).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          role = userData?.role || 'school';
+        }
+      } catch (dbError) {
+        console.error("Error fetching user role:", dbError);
+        // Fallback to school if DB fails, to allow login at least (restricted by client later)
+      }
+    }
+
+    return NextResponse.json({ success: true, role });
   } catch (error: any) {
     console.error('Error creating session cookie:', error);
     return NextResponse.json(

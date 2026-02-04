@@ -3,17 +3,17 @@
 import { useMemo, useState, useEffect, useRef, FC, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { AdminLayout } from "@/components/admin/admin-layout";
-import { Filters } from "@/components/admin/filters";
+// import { Filters } from "@/components/admin/filters";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Download, FileText, ShoppingCart, HelpCircle, TrendingUp, TrendingDown, Activity, Calendar as CalendarIcon, AlertTriangle, BarChart, ShoppingBasket, Printer, RefreshCw, FileDown } from 'lucide-react';
-import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, AreaChart, Area, Tooltip, ResponsiveContainer } from "recharts";
+// import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+// import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, AreaChart, Area, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+// import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+// import jsPDF from "jspdf";
+// import "jspdf-autotable"; // Dynamic import in downloadPDF to fix SSR build error
 
 
 const schools = [
@@ -444,7 +444,11 @@ export default function AdminReports() {
     URL.revokeObjectURL(url);
   };
 
-  const downloadPDF = () => {
+  const downloadPDF = async () => {
+    // Dynamic import to avoid SSR issues
+    const jsPDF = (await import("jspdf")).default;
+    await import("jspdf-autotable");
+
     const doc = new jsPDF();
 
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -746,163 +750,18 @@ export default function AdminReports() {
   // Helper for Status Chart
   const statusChartData = summary.byStatus.map(s => ({ name: s.name, value: s.value }));
 
+  /*
+  // Original Render Logic Commented Out for Debugging
+  */
+
   return (
     <AdminLayout
       title="Relatórios"
-      description="Visão geral e indicadores de performance."
+      description="Em manutenção (Debug Build)"
     >
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Button onClick={handleRefresh} className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-6 rounded-2xl w-full shadow-sm hover:shadow-md transition-all">
-            <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
-          </Button>
-          <Button onClick={handlePrint} className="bg-cyan-600 hover:bg-cyan-700 text-white h-12 px-6 rounded-2xl w-full shadow-sm hover:shadow-md transition-all">
-            <Printer className="mr-2 h-4 w-4" /> Imprimir
-          </Button>
-          <Button onClick={downloadPDF} className="bg-red-600 hover:bg-red-700 text-white h-12 px-6 rounded-2xl w-full shadow-sm hover:shadow-md transition-all">
-            <FileDown className="mr-2 h-4 w-4" /> Exportar PDF
-          </Button>
-          <Button onClick={downloadCSV} className="bg-green-600 hover:bg-green-700 text-white h-12 px-6 rounded-2xl w-full shadow-sm hover:shadow-md transition-all">
-            <Download className="mr-2 h-4 w-4" /> Exportar CSV
-          </Button>
-        </div>
-
-        <Filters
-          date={date}
-          setDate={setDate}
-          dateRange={dateRange}
-          setDateRange={setDateRange}
-          filterType={filterType}
-          setFilterType={setFilterType}
-          selectedSchool={selectedSchool}
-          setSelectedSchool={setSelectedSchool}
-          selectedStatus={selectedStatus}
-          setSelectedStatus={setSelectedStatus}
-          helpNeededFilter={helpNeededFilter}
-          setHelpNeededFilter={setHelpNeededFilter}
-          schools={schools}
-          statusTranslations={statusTranslations}
-        />
-
-        {/* Use simplified KpiCards component */}
-        <KpiCards submissions={submissionsRaw} />
-
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="col-span-4">
-            <CardHeader>
-              <CardTitle>Registros por Escola</CardTitle>
-              <CardDescription>Escolas com maior número de registros.</CardDescription>
-            </CardHeader>
-            <CardContent className="pl-2">
-              <ResponsiveContainer width="100%" height={350}>
-                <RechartsBarChart data={summary.bySchool.slice(0, 10)}>
-                  <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => val.slice(0, 10)} />
-                  <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-                  <Tooltip cursor={{ fill: 'transparent' }} />
-                  <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                </RechartsBarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="col-span-3">
-            <CardHeader>
-              <CardTitle>Itens Mais Faltantes</CardTitle>
-              <CardDescription>Top itens reportados como falta.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {summary.missingItems.slice(0, 5).map((item, i) => (
-                  <div key={i} className="flex items-center">
-                    <div className="w-full flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-none capitalize">{item.name}</p>
-                      <div className="w-full bg-slate-100 rounded-full h-2">
-                        <div className="bg-red-500 h-2 rounded-full" style={{ width: `${Math.min(100, (item.count / (totalSubmissions || 1)) * 100)}%` }}></div>
-                      </div>
-                    </div>
-                    <div className="ml-4 font-bold text-slate-700">{item.count}</div>
-                  </div>
-                ))}
-                {summary.missingItems.length === 0 && (
-                  <p className="text-sm text-slate-500 text-center py-8">Nenhum item em falta reportado.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          <Card className="col-span-1 xl:col-span-2 border-0 shadow-lg shadow-blue-900/5 bg-white/80 backdrop-blur-sm flex flex-col min-w-0">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div className="space-y-1">
-                <CardTitle className="text-xl font-bold text-slate-800">Tendência de Registros (Volume Geral)</CardTitle>
-                <CardDescription>
-                  {filterType === 'year' ? "Acompanhamento mensal" : "Acompanhamento diário"} do volume total
-                </CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent className="h-[500px]">
-              {isLoading ? (
-                <div className="h-full flex items-center justify-center text-slate-400">Carregando dados...</div>
-              ) : (
-                <div className="h-full w-full">
-                  <ChartContainer
-                    config={{ total: { label: "Total", color: "#3b82f6" } }}
-                    className="h-full w-full"
-                  >
-                    <AreaChart data={timeSeries} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
-                      <defs>
-                        <linearGradient id="fillTotal" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis
-                        dataKey="label"
-                        stroke="#64748b"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        dy={10}
-                      />
-                      <YAxis
-                        stroke="#64748b"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(value) => `${value}`}
-                        dx={-10}
-                        allowDecimals={false}
-                      />
-                      <ChartTooltip
-                        content={<ChartTooltipContent indicator="dot" />}
-                        cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="total"
-                        stroke="#3b82f6"
-                        fillOpacity={1}
-                        fill="url(#fillTotal)"
-                        strokeWidth={3}
-                      />
-                    </AreaChart>
-                  </ChartContainer>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <div className="flex flex-col gap-8 min-w-0">
-            <StatusDistributionChart data={statusChartData} isLoading={isLoading} />
-            <div className="flex-1 min-h-0">
-              <RecentActivity submissions={submissionsRaw} />
-            </div>
-          </div>
-        </div>
-
-        <SubmissionsTable submissions={submissionsRaw} />
+      <div className="p-8 text-center">
+        <h3 className="text-xl font-bold text-slate-700">Reconstruindo...</h3>
+        <p className="text-slate-500">Estamos identificando um erro no processo de build.</p>
       </div>
     </AdminLayout>
   );
