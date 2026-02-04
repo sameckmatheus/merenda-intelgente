@@ -149,15 +149,27 @@ export async function PUT(request: Request) {
             if (existingNew.exists) return NextResponse.json({ error: 'Target school name already exists' }, { status: 409 });
 
             const data = oldDoc.data();
+            const oldName = data?.name;
 
             const batch = db.batch();
             // We should ideally carry over subcollections too, but standard Firestore move doesn't support recursive move trivially.
             // For now, assuming shallow move is enough OR settings are stored within the doc fields (confirmed in settings/route.ts, settings are fields).
-            // BUT, if there are subcollections (like submissions?), they would be orphaned.
-            // checking submissions/route.ts might be wise, but assuming 'schools' collection is mostly metadata/settings.
 
+            // 1. Move School Document
             batch.set(newRef, { ...data, name, updatedAt: new Date(), updatedBy: authed.uid });
             batch.delete(oldRef);
+
+            // 2. Update all Submissions referencing this school
+            if (oldName) {
+                const submissionsSnapshot = await db.collection('submissions').where('school', '==', oldName).get();
+                if (!submissionsSnapshot.empty) {
+                    console.log(`Propagating rename from "${oldName}" to "${name}" for ${submissionsSnapshot.size} submissions.`);
+                    submissionsSnapshot.docs.forEach(doc => {
+                        batch.update(doc.ref, { school: name });
+                    });
+                }
+            }
+
             await batch.commit();
         }
 

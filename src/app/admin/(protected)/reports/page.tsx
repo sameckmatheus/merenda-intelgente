@@ -391,7 +391,7 @@ export default function AdminReports() {
       escapeCSV(submission.school || ''),
       escapeCSV(submission.shift || ''),
       escapeCSV(submission.respondentName || ''),
-      escapeCSV(submission.studentsCount || ''),
+      escapeCSV(submission.presentStudents || ''),
       escapeCSV(submission.status || 'Pendente'),
       escapeCSV(
         submission.menuType === 'planned' ? 'Previsto' :

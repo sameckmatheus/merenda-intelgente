@@ -713,8 +713,8 @@ const SubmissionDetailDialog = ({ submission, isOpen, onClose }: { submission: a
                   <span className="text-sm font-medium capitalize text-slate-700">{submission.shift}</span>
                 </div>
                 <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                  <span className="text-xs text-slate-500 block mb-1">Total Alunos</span>
-                  <span className="text-sm font-medium text-slate-700">{submission.studentsCount || '-'}</span>
+                  <span className="text-xs text-slate-500 block mb-1">Alunos Presentes</span>
+                  <span className="text-sm font-medium text-slate-700">{submission.presentStudents || '-'}</span>
                 </div>
               </div>
             </div>
@@ -1084,7 +1084,7 @@ const SchoolDetailsModal = ({ school, isOpen, onClose }: { school: string | null
                               </div>
                             </TableCell>
                             <TableCell className="text-slate-600 capitalize">{row.shift}</TableCell>
-                            <TableCell className="text-slate-600 font-medium">{row.studentsCount || '-'}</TableCell>
+                            <TableCell className="text-slate-600 font-medium">{row.presentStudents || '-'}</TableCell>
                             <TableCell>
                               <Badge variant={row.status === 'confirmado' ? 'default' : row.status === 'cancelado' ? 'destructive' : 'secondary'} className="capitalize shadow-none">
                                 {row.status || 'Pendente'}
