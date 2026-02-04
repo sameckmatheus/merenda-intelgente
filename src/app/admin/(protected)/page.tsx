@@ -430,17 +430,17 @@ export default function AdminDashboard() {
 
       {selectedSubmission && (
         <Dialog open={!!selectedSubmission} onOpenChange={(open) => !open && setSelectedSubmission(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden bg-slate-50/95 backdrop-blur-xl border-white/20 gap-0">
-            <div className="p-6 bg-white border-b border-slate-100 shadow-sm relative overflow-hidden shrink-0">
+          <DialogContent className="w-[95vw] max-w-4xl max-h-[85dvh] flex flex-col p-0 overflow-hidden bg-slate-50/95 backdrop-blur-xl gap-0 rounded-2xl outline-none border-none shadow-none ring-0">
+            <div className="p-4 md:p-6 bg-white border-b border-slate-100 shadow-sm relative overflow-hidden shrink-0">
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
-              <DialogHeader className="relative z-10 text-left">
-                <DialogTitle className="text-2xl font-bold flex items-center gap-2 text-slate-800">
-                  <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                    <GraduationCap className="w-6 h-6" />
+              <DialogHeader className="relative z-10 text-left pr-6">
+                <DialogTitle className="text-lg md:text-2xl font-bold flex items-center gap-2 text-slate-800 break-words leading-tight">
+                  <div className="p-1.5 md:p-2 bg-blue-100 rounded-lg text-blue-600 shrink-0">
+                    <GraduationCap className="w-4 h-4 md:w-6 md:h-6" />
                   </div>
                   {selectedSubmission.school}
                 </DialogTitle>
-                <DialogDescription className="text-slate-500 text-left">
+                <DialogDescription className="text-xs md:text-sm text-slate-500 text-left mt-1">
                   Registro de {selectedSubmission.respondentName} para o turno da {selectedSubmission.shift} em{' '}
                   {format(
                     selectedSubmission.date instanceof Timestamp ? selectedSubmission.date.toDate() : new Date(typeof selectedSubmission.date === 'number' ? selectedSubmission.date : selectedSubmission.date),
@@ -451,15 +451,14 @@ export default function AdminDashboard() {
               </DialogHeader>
             </div>
 
-            <ScrollArea className="flex-1 w-full p-6">
-              <div className="space-y-6">
-
+            <div className="flex-1 w-full bg-slate-50/50 overflow-y-auto">
+              <div className="flex flex-col p-4 md:p-6 gap-6 w-full max-w-full">
                 {/* Contact Actions */}
                 {schoolDetails && schoolDetails.contacts && (
-                  <div className="flex gap-3 mb-2">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <Button
                       variant="outline"
-                      className="flex-1 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 gap-2"
+                      className="flex-1 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 gap-2 h-10 md:h-12"
                       onClick={() => {
                         const msg = `Olá, referente ao registro de merenda do dia ${formatDate(selectedSubmission.date)} (${selectedSubmission.shift}) da escola ${selectedSubmission.school}. Status atual: ${statusTranslations[selectedSubmission.status || 'pendente']}.`;
                         const phone = schoolDetails.contacts?.whatsapp?.replace(/\D/g, '') || '';
@@ -467,11 +466,11 @@ export default function AdminDashboard() {
                       }}
                       disabled={!schoolDetails.contacts.whatsapp}
                     >
-                      <MessageCircle className="w-4 h-4" /> WhatsApp
+                      <MessageCircle className="w-4 h-4 md:w-5 md:h-5" /> WhatsApp
                     </Button>
                     <Button
                       variant="outline"
-                      className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700 gap-2"
+                      className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700 gap-2 h-10 md:h-12"
                       onClick={() => {
                         const subject = `Registro Merenda - ${selectedSubmission.school} - ${formatDate(selectedSubmission.date)}`;
                         const body = `Olá,\n\nReferente ao registro do dia ${formatDate(selectedSubmission.date)} (${selectedSubmission.shift}).\nStatus atual: ${statusTranslations[selectedSubmission.status || 'pendente']}.\n\nAtenciosamente,\nEquipe Merenda Inteligente`;
@@ -479,20 +478,20 @@ export default function AdminDashboard() {
                       }}
                       disabled={!schoolDetails.contacts.email}
                     >
-                      <Mail className="w-4 h-4" /> Email
+                      <Mail className="w-4 h-4 md:w-5 md:h-5" /> Email
                     </Button>
                   </div>
                 )}
 
-                <Card className="bg-slate-50/50">
-                  <CardContent className="p-4 grid grid-cols-2 gap-4">
+                <Card className="bg-white border-slate-100 shadow-sm">
+                  <CardContent className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <DetailItem
-                      icon={<Users />}
+                      icon={<Users className="w-4 h-4 text-blue-500" />}
                       label="Alunos"
-                      value={`${selectedSubmission.presentStudents} presentes de ${selectedSubmission.totalStudents}`}
+                      value={`${selectedSubmission.presentStudents || 0} presentes de ${selectedSubmission.totalStudents || 0}`}
                     />
                     <DetailItem
-                      icon={<Utensils />}
+                      icon={<Utensils className="w-4 h-4 text-orange-500" />}
                       label="Cardápio Servido"
                       value={menuTypeTranslations[selectedSubmission.menuType]}
                     />
@@ -500,71 +499,71 @@ export default function AdminDashboard() {
                 </Card>
 
                 <DetailItem
-                  icon={<MessageSquare />}
+                  icon={<MessageSquare className="w-4 h-4 text-violet-500" />}
                   label="Detalhe Cardápio Alternativo"
                   value={selectedSubmission.alternativeMenuDescription}
                   fullWidth
                 />
 
-                <Separator />
+                <Separator className="bg-slate-200" />
 
-                <div className="p-4 border rounded-lg bg-amber-50 border-amber-200 space-y-4">
-                  <h3 className="font-bold text-amber-900 flex items-center gap-2">
-                    <HelpCircle /> Seção de Ajuda
+                <div className="p-4 md:p-6 border border-amber-200 bg-amber-50/50 rounded-xl space-y-4">
+                  <h3 className="font-bold text-amber-900 flex items-center gap-2 text-sm md:text-base">
+                    <HelpCircle className="w-5 h-5 text-amber-600" /> Seção de Ajuda
                   </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <DetailItem
+                      icon={<HelpCircle className="w-4 h-4 text-amber-600" />}
+                      label="Pedido de Ajuda"
+                      value={selectedSubmission.helpNeeded}
+                    />
+                    <DetailItem
+                      icon={<ShoppingBasket className="w-4 h-4 text-amber-600" />}
+                      label="Pode Comprar?"
+                      value={selectedSubmission.canBuyMissingItems}
+                    />
+                  </div>
                   <DetailItem
-                    icon={<HelpCircle className="text-amber-700" />}
-                    label="Pedido de Ajuda"
-                    value={selectedSubmission.helpNeeded}
-                  />
-                  <DetailItem
-                    icon={<MessageSquare />}
+                    icon={<MessageSquare className="w-4 h-4 text-amber-600" />}
                     label="Itens em Falta"
                     value={selectedSubmission.missingItems}
                     fullWidth
                   />
                   <DetailItem
-                    icon={<ShoppingBasket />}
-                    label="Pode Comprar os Itens?"
-                    value={selectedSubmission.canBuyMissingItems}
-                  />
-                  <DetailItem
-                    icon={<ShoppingBasket />}
+                    icon={<ShoppingBasket className="w-4 h-4 text-amber-600" />}
                     label="Itens Comprados"
                     value={selectedSubmission.itemsPurchased}
                     fullWidth
                   />
                 </div>
 
-                <Separator />
+                <Separator className="bg-slate-200" />
 
-                <div className="p-4 border rounded-lg bg-slate-50 space-y-4">
-                  <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                    <PackageCheck /> Seção de Suprimentos
+                <div className="p-4 md:p-6 border border-blue-100 bg-blue-50/30 rounded-xl space-y-4">
+                  <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm md:text-base">
+                    <PackageCheck className="w-5 h-5 text-blue-600" /> Seção de Suprimentos
                   </h3>
                   <DetailItem
-                    icon={<PackageCheck />}
+                    icon={<PackageCheck className="w-4 h-4 text-blue-600" />}
                     label="Recebeu Suprimentos?"
                     value={selectedSubmission.suppliesReceived}
                   />
                   <DetailItem
-                    icon={<MessageSquare />}
+                    icon={<MessageSquare className="w-4 h-4 text-blue-600" />}
                     label="Suprimentos Recebidos"
                     value={selectedSubmission.suppliesDescription}
                     fullWidth
                   />
                 </div>
 
-                <Separator />
-
                 <DetailItem
-                  icon={<MessageSquare />}
+                  icon={<MessageSquare className="w-4 h-4 text-slate-500" />}
                   label="Observações Gerais"
                   value={selectedSubmission.observations}
                   fullWidth
                 />
               </div>
-            </ScrollArea>
+            </div>
           </DialogContent>
         </Dialog>
       )}
