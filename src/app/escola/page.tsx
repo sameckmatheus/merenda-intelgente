@@ -67,48 +67,13 @@ export default function SchoolDashboardPage() {
 
     // Single school - show directly
     if (schools.length === 1) {
-        return (
-            <div className="min-h-screen bg-slate-50">
-                <div className="p-4 bg-white border-b border-slate-100 shadow-sm flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                            <GraduationCap className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-bold text-slate-800">{schools[0]}</h1>
-                            <p className="text-xs text-slate-500">{userEmail}</p>
-                        </div>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
-                        <LogOut className="w-4 h-4" />
-                        Sair
-                    </Button>
-                </div>
-                <SchoolDashboardContent school={schools[0]} />
-            </div>
-        );
+        return <SchoolDashboardContent school={schools[0]} hideHeader={true} />;
     }
 
     // Multiple schools - show tabs
     return (
         <div className="min-h-screen bg-slate-50">
-            <div className="p-4 md:p-6 bg-white border-b border-slate-100 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                            <GraduationCap className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-bold text-slate-800">Painel Escolar</h1>
-                            <p className="text-sm text-slate-500">Gerenciando {schools.length} unidades • {userEmail}</p>
-                        </div>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
-                        <LogOut className="w-4 h-4" />
-                        Sair
-                    </Button>
-                </div>
-
+            <div className="p-4 md:p-6">
                 <Tabs defaultValue={schools[0]} className="w-full">
                     <TabsList className="w-full sm:w-auto grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-lg">
                         {schools.map((school) => (
@@ -123,8 +88,8 @@ export default function SchoolDashboardPage() {
                     </TabsList>
 
                     {schools.map((school) => (
-                        <TabsContent key={school} value={school} className="mt-0">
-                            <SchoolDashboardContent school={school} />
+                        <TabsContent key={school} value={(school)} className="mt-0">
+                            <SchoolDashboardContent school={school} hideHeader={true} />
                         </TabsContent>
                     ))}
                 </Tabs>

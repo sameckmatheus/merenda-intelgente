@@ -629,7 +629,7 @@ const SubmissionDetailDialog = ({ submission, isOpen, onClose }: { submission: a
     );
 };
 
-export default function SchoolDashboardContent({ school, isOpen, onClose }: { school: string | null, isOpen?: boolean, onClose?: () => void }) {
+export default function SchoolDashboardContent({ school, isOpen, onClose, hideHeader }: { school: string | null, isOpen?: boolean, onClose?: () => void, hideHeader?: boolean }) {
     const [data, setData] = useState<any[]>([]);
     const [visibleData, setVisibleData] = useState<any[]>([]);
     const [page, setPage] = useState(1);
@@ -720,7 +720,7 @@ export default function SchoolDashboardContent({ school, isOpen, onClose }: { sc
 
     const content = (
         <div className="flex flex-col h-full bg-slate-50/50">
-            {!isModal ? (
+            {!isModal && !hideHeader && (
                 <div className="p-6 bg-white border-b border-slate-100 shadow-sm relative overflow-hidden shrink-0">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
                     <div className="relative z-10 text-left">
@@ -737,10 +737,10 @@ export default function SchoolDashboardContent({ school, isOpen, onClose }: { sc
                                 </p>
                             </div>
                             <Button
-                                variant="outline"
+                                variant="default"
                                 size="sm"
                                 onClick={() => window.location.reload()}
-                                className="gap-2 w-full md:w-auto"
+                                className="gap-2 w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white border-none"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" /></svg>
                                 Atualizar
@@ -748,7 +748,8 @@ export default function SchoolDashboardContent({ school, isOpen, onClose }: { sc
                         </div>
                     </div>
                 </div>
-            ) : (
+            )}
+            {isModal && (
                 <div className="p-4 md:p-6 bg-white border-b border-slate-100 shadow-sm relative overflow-hidden shrink-0">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
                     <DialogHeader className="relative z-10 text-left pr-6">

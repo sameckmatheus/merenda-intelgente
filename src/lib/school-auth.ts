@@ -1,3 +1,4 @@
+// School email mappings
 // Mapping of email to school name(s)
 // Some accounts may manage multiple school units
 export const SCHOOL_ACCOUNTS: Record<string, string[]> = {
@@ -18,6 +19,12 @@ export const SCHOOL_ACCOUNTS: Record<string, string[]> = {
     'mundocriancamunicipal@gmail.com': ['MUNDO DA CRIANÇA']
 };
 
+// Admin email - any email not in SCHOOL_ACCOUNTS is considered admin
+export const ADMIN_EMAILS = [
+    'admin@merendainteligente.gov.br',
+    'administrador@município.gov.br'
+];
+
 export function getSchoolsByEmail(email: string): string[] {
     return SCHOOL_ACCOUNTS[email.toLowerCase()] || [];
 }
@@ -26,3 +33,8 @@ export function isSchoolEmail(email: string): boolean {
     return !!SCHOOL_ACCOUNTS[email.toLowerCase()];
 }
 
+export function isAdminEmail(email: string): boolean {
+    const emailLower = email.toLowerCase();
+    // Check if it's explicitly in admin list OR not in school accounts
+    return ADMIN_EMAILS.includes(emailLower) || !isSchoolEmail(emailLower);
+}
