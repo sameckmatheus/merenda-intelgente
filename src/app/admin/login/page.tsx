@@ -45,7 +45,17 @@ export default function LoginPage() {
         </CardContent>
       </Card>
 
-      <p className="mt-8 text-center text-xs text-slate-400">
+      <div className="mt-6 text-center">
+        <p className="text-sm text-slate-500 mb-2">Acesso para escolas?</p>
+        <a
+          href="/login"
+          className="text-blue-600 hover:text-blue-700 font-medium text-sm underline decoration-2 underline-offset-4 transition-colors"
+        >
+          Acessar como Escola
+        </a>
+      </div>
+
+      <p className="mt-6 text-center text-xs text-slate-400">
         © {new Date().getFullYear()} Secretaria de Educação. Todos os direitos reservados.
       </p>
     </div>
