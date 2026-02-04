@@ -91,7 +91,7 @@ export default function SchoolSettingsPage() {
                             studentCounts: data.settings.studentCounts || { morning: 0, afternoon: 0, night: 0 },
                         });
                     } else {
-                        setSchoolProfile(prev => ({ ...prev, name: school, email: user.email }));
+                        setSchoolProfile(prev => ({ ...prev, name: school, email: user.email || "" }));
                     }
                 }
             } catch (error) {
@@ -138,18 +138,6 @@ export default function SchoolSettingsPage() {
             });
         } finally {
             setIsSaving(false);
-        }
-    };
-
-    const handleLogout = async () => {
-        try {
-            const auth = getAuth();
-            await auth.signOut();
-            await fetch('/api/logout', { method: 'POST' });
-            router.push('/login');
-        } catch (error) {
-            console.error('Logout failed:', error);
-            router.push('/login');
         }
     };
 

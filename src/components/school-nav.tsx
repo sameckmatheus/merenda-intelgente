@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LayoutDashboard, FileText, Utensils, Settings } from "lucide-react";
+import { Menu, X, LayoutDashboard, FileText, Utensils, Settings, LogOut } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +18,18 @@ const schoolMenuItems = [
 
 export function SchoolNav() {
     const pathname = usePathname();
+    const router = useRouter();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    const handleLogout = async () => {
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            router.push('/login');
+        } catch (error) {
+            console.error('Logout failed:', error);
+            router.push('/login');
+        }
+    };
 
     return (
         <header className="sticky top-0 z-[60] w-full border-b border-[#204ecf] bg-[#275fcf]">
@@ -94,9 +105,29 @@ export function SchoolNav() {
                                         </Link>
                                     );
                                 })}
+
+                                {/* Logout button in mobile menu */}
+                                <button
+                                    onClick={handleLogout}
+                                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-red-50 hover:text-red-900 text-red-600 w-full"
+                                >
+                                    <LogOut className="h-4 w-4" />
+                                    Sair
+                                </button>
                             </nav>
                         </SheetContent>
                     </Sheet>
+
+                    {/* Desktop Logout Button */}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleLogout}
+                        className="hidden lg:flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white border-none"
+                    >
+                        <LogOut className="h-4 w-4" />
+                        Sair
+                    </Button>
                 </div>
             </div>
         </header>
