@@ -380,26 +380,29 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-white rounded-2xl border-none outline-none shadow-xl">
-        <DialogHeader className="p-6 border-b bg-white shrink-0">
-          <div className="flex flex-col gap-2">
-            <DialogTitle className="flex items-start sm:items-center gap-2 text-xl font-bold text-slate-800 leading-tight">
-              <Package className="w-5 h-5 text-blue-600 shrink-0 mt-1 sm:mt-0" />
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[85dvh] flex flex-col p-0 overflow-hidden bg-slate-50/95 backdrop-blur-xl gap-0 rounded-2xl outline-none border-none shadow-none ring-0">
+        <div className="p-4 md:p-6 bg-white border-b border-slate-100 shadow-sm relative overflow-hidden shrink-0">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+          <DialogHeader className="relative z-10 text-left pr-6">
+            <DialogTitle className="text-lg md:text-2xl font-bold flex items-center gap-2 text-slate-800 break-words leading-tight">
+              <div className="p-1.5 md:p-2 bg-blue-100 rounded-lg text-blue-600 shrink-0">
+                <Package className="w-4 h-4 md:w-6 md:h-6" />
+              </div>
               <span className="break-words">Controle de Estoque - {school}</span>
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs md:text-sm text-slate-500 text-left mt-1 line-clamp-1">
               Gerencie os itens disponíveis na despensa da escola.
             </DialogDescription>
-          </div>
-        </DialogHeader>
+          </DialogHeader>
+        </div>
 
-        <div className="px-6 py-4 border-b bg-white flex flex-col gap-4 shrink-0">
+        <div className="px-6 py-4 border-b bg-white/50 flex flex-col gap-4 shrink-0 backdrop-blur-sm z-10">
           {/* 1. Search Bar */}
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
               placeholder="Buscar item..."
-              className="pl-9 w-full bg-slate-50 border-slate-200"
+              className="pl-9 w-full bg-white border-slate-200 shadow-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -407,10 +410,10 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
 
           {/* 2. Action Buttons */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-            <Button size="sm" variant="outline" className="w-full gap-2 border-dashed border-slate-300 hover:border-slate-400 text-slate-600" onClick={() => setIsManagingCategories(true)}>
+            <Button size="sm" variant="outline" className="w-full gap-2 border-dashed border-slate-300 hover:border-slate-400 text-slate-600 bg-white" onClick={() => setIsManagingCategories(true)}>
               <Plus className="w-4 h-4" /> Gerenciar Categorias
             </Button>
-            <Button size="sm" className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => {
+            <Button size="sm" className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm" onClick={() => {
               setNewItemData({ category: "Estocáveis", unit: "kg", quantity: 0, minQuantity: 0 });
               setIsAddingItem(true);
             }}>
@@ -428,8 +431,8 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
                   size="sm"
                   onClick={() => setSelectedCategory(cat)}
                   className={cn(
-                    "rounded-full px-4 whitespace-nowrap",
-                    selectedCategory === cat ? "bg-slate-800 text-white hover:bg-slate-900" : "text-slate-600 border-slate-200"
+                    "rounded-full px-4 whitespace-nowrap shadow-sm border",
+                    selectedCategory === cat ? "bg-slate-800 text-white hover:bg-slate-900 border-transparent" : "text-slate-600 border-slate-200 bg-white"
                   )}
                 >
                   {cat}
@@ -514,7 +517,7 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
 
         <div className="px-6 py-4 border-t bg-white flex justify-end gap-3 shrink-0">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]">
+          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[120px] shadow-sm">
             <Save className="w-4 h-4 mr-2" />
             Salvar
           </Button>
