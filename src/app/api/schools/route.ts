@@ -49,23 +49,28 @@ export async function GET(request: Request) {
         const schoolsSnapshot = await db.collection('schools').get();
 
         let schools = schoolsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const schoolsMap = new Map(schools.map((s: any) => [normalizeString(s.name), s]));
 
-        // Auto-seed if empty
-        if (schools.length === 0) {
-            console.log("Seeding schools from constants...");
+        // Check for missing schools from the constant list
+        const missingSchools = SCHOOLS_LIST.filter(name => !schoolsMap.has(normalizeString(name)));
+
+        if (missingSchools.length > 0) {
+            console.log(`Found ${missingSchools.length} missing schools. Seeding...`);
             const batch = db.batch();
-            const seededSchools: any[] = [];
+            const newSchools: any[] = [];
 
-            for (const name of SCHOOLS_LIST) {
+            for (const name of missingSchools) {
                 const docId = normalizeString(name);
                 const ref = db.collection('schools').doc(docId);
                 const data = { name, createdAt: new Date() };
                 batch.set(ref, data);
-                seededSchools.push({ id: ref.id, ...data });
+                newSchools.push({ id: ref.id, ...data });
             }
 
             await batch.commit();
-            schools = seededSchools;
+
+            // Append new schools to the list
+            schools = [...schools, ...newSchools];
         }
 
         // Sort by name
