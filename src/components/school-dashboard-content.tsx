@@ -221,7 +221,7 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="w-[95vw] max-w-4xl max-h-[85dvh] flex flex-col p-0 overflow-hidden bg-slate-50/95 backdrop-blur-xl gap-0 rounded-2xl outline-none border-none shadow-none ring-0">
+            <DialogContent className="w-[95vw] max-w-6xl max-h-[85dvh] flex flex-col p-0 overflow-hidden bg-slate-50/95 backdrop-blur-xl gap-0 rounded-2xl outline-none border-none shadow-none ring-0">
                 <div className="p-4 md:p-6 bg-white border-b border-slate-100 shadow-sm relative overflow-hidden shrink-0">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
                     <DialogHeader className="relative z-10 text-left pr-6">
@@ -371,7 +371,7 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
                         setEditingItem(null);
                     }
                 }}>
-                    <DialogContent className="max-w-md">
+                    <DialogContent className="max-w-xl">
                         <DialogHeader>
                             <DialogTitle>{editingItem ? 'Editar Item' : 'Novo Item'}</DialogTitle>
                             <DialogDescription>Preencha os dados do item de estoque.</DialogDescription>
@@ -524,7 +524,7 @@ const SubmissionDetailDialog = ({ submission, isOpen, onClose }: { submission: a
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-lg w-full max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-white rounded-2xl">
+            <DialogContent className="max-w-2xl w-full max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-white rounded-2xl">
                 <DialogHeader className="p-6 border-b bg-white shrink-0">
                     <div className="flex items-center justify-between mb-2">
                         <Badge variant={submission.status === 'confirmado' ? 'default' : submission.status === 'cancelado' ? 'destructive' : 'secondary'} className="capitalize bg-opacity-90">
