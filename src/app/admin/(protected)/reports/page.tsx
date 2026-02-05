@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, useRef, FC, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { AdminLayout } from "@/components/admin/admin-layout";
-// import { Filters } from "@/components/admin/filters";
+import { Filters } from "@/components/admin/filters";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Download, FileText, ShoppingCart, HelpCircle, TrendingUp, TrendingDown, Activity, Calendar as CalendarIcon, AlertTriangle, BarChart, ShoppingBasket, Printer, RefreshCw, FileDown } from 'lucide-react';
@@ -210,6 +210,198 @@ const SubmissionsTable: FC<{ submissions: any[] }> = ({ submissions }) => (
           )}
         </TableBody>
       </Table>
+    </CardContent>
+  </Card>
+);
+
+const TimeActivityChart: FC<{ data: any[], isLoading: boolean }> = ({ data, isLoading }) => {
+  return (
+    <Card className="border-0 shadow-lg shadow-blue-900/5 bg-white/80 backdrop-blur-sm min-w-0">
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold text-slate-800">Evolução das Submissões</CardTitle>
+        <CardDescription>Volume de registros ao longo do tempo</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="h-64 flex items-center justify-center text-slate-400">Carregando...</div>
+        ) : data.length > 0 ? (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis
+                  dataKey="label"
+                  stroke="#64748b"
+                  tick={{ fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  stroke="#64748b"
+                  tick={{ fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  cursor={{ stroke: '#94a3b8', strokeWidth: 1 }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#3b82f6"
+                  strokeWidth={3}
+                  fillOpacity={1}
+                  fill="url(#colorTotal)"
+                  name="Registros"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="h-64 flex items-center justify-center text-muted-foreground">Sem dados</div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+const MenuTypeChart: FC<{ submissions: any[], isLoading: boolean }> = ({ submissions, isLoading }) => {
+  const data = useMemo(() => {
+    const counts: Record<string, number> = { planned: 0, alternative: 0, improvised: 0 };
+    submissions.forEach(s => {
+      if (s.menuType === 'planned') counts.planned++;
+      else if (s.menuType === 'alternative') counts.alternative++;
+      else counts.improvised++;
+    });
+
+    return [
+      { name: 'Previsto', value: counts.planned, color: '#10b981' }, // Emerald
+      { name: 'Alternativo', value: counts.alternative, color: '#f59e0b' }, // Amber
+      { name: 'Improvisado', value: counts.improvised, color: '#ef4444' }, // Red
+    ].filter(d => d.value > 0);
+  }, [submissions]);
+
+  return (
+    <Card className="border-0 shadow-lg shadow-blue-900/5 bg-white/80 backdrop-blur-sm min-w-0">
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold text-slate-800">Tipos de Cardápio</CardTitle>
+        <CardDescription>Aderência ao planejamento</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="h-64 flex items-center justify-center text-slate-400">Carregando...</div>
+        ) : data.length > 0 ? (
+          <div className="h-64">
+            <ChartContainer
+              config={{
+                planned: { label: 'Previsto', color: '#10b981' },
+                alternative: { label: 'Alternativo', color: '#f59e0b' },
+                improvised: { label: 'Improvisado', color: '#ef4444' },
+              }}
+              className="h-full w-full"
+            >
+              <PieChart>
+                <Pie
+                  data={data}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                >
+                  {data.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+                  ))}
+                </Pie>
+                <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
+                <ChartLegend
+                  content={({ payload }) => (
+                    <div className="flex justify-center gap-4 mt-4 flex-wrap">
+                      {payload?.map((entry: any, index: number) => (
+                        <div key={`legend-${index}`} className="flex items-center gap-2 text-sm text-slate-600">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
+                          <span className="capitalize">{entry.payload?.label || entry.value}</span>
+                          <span className="text-xs text-slate-400">({entry.payload?.payload?.value})</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                />
+              </PieChart>
+            </ChartContainer>
+          </div>
+        ) : (
+          <div className="h-64 flex items-center justify-center text-muted-foreground">Sem dados</div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+const DetailedActivityLog: FC<{ submissions: any[] }> = ({ submissions }) => (
+  <Card className="border-0 shadow-lg shadow-blue-900/5 bg-white/80 backdrop-blur-sm overflow-hidden col-span-full">
+    <CardHeader>
+      <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+        <FileText className="w-5 h-5 text-slate-500" /> Log de Atividades Detalhado
+      </CardTitle>
+      <CardDescription>Registro completo de todas as ações no sistema</CardDescription>
+    </CardHeader>
+    <CardContent className="p-0">
+      <div className="max-h-[500px] overflow-auto">
+        <Table>
+          <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
+            <TableRow className="hover:bg-transparent border-slate-100">
+              <TableHead className="font-semibold text-slate-600 w-[180px]">Data & Hora</TableHead>
+              <TableHead className="font-semibold text-slate-600">Usuário</TableHead>
+              <TableHead className="font-semibold text-slate-600">Escola</TableHead>
+              <TableHead className="font-semibold text-slate-600">Ação</TableHead>
+              <TableHead className="font-semibold text-slate-600">Detalhes</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {submissions.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">Nenhum registro encontrado</TableCell>
+              </TableRow>
+            ) : (
+              submissions.map((s: any) => {
+                const dateObj = new Date(typeof s.date === 'number' ? s.date : s.date?.toMillis?.() || s.date || 0);
+                return (
+                  <TableRow key={s.id} className="hover:bg-slate-50/50 border-slate-100 transition-colors">
+                    <TableCell className="font-mono text-xs text-slate-500">
+                      {dateObj.toLocaleString('pt-BR')}
+                    </TableCell>
+                    <TableCell className="font-medium text-slate-700 text-sm">{s.respondentName || 'Sistema'}</TableCell>
+                    <TableCell className="text-slate-600 text-sm">{s.school}</TableCell>
+                    <TableCell>
+                      <span className={cn(
+                        "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                        s.status === 'atendido' ? "bg-emerald-100 text-emerald-700" :
+                          s.menuType === 'improvised' ? "bg-red-100 text-red-700" :
+                            s.helpNeeded ? "bg-amber-100 text-amber-700" :
+                              "bg-blue-100 text-blue-700"
+                      )}>
+                        {s.helpNeeded ? 'PEDIDO AJUDA' : s.menuType === 'planned' ? 'REGISTRO DIÁRIO' : 'OCORRÊNCIA'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-slate-500 text-sm max-w-[300px] truncate" title={s.observations || s.missingItems || s.alternativeMenuDescription || ''}>
+                      {s.observations || s.missingItems || s.alternativeMenuDescription || '-'}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </CardContent>
   </Card>
 );
@@ -757,11 +949,72 @@ export default function AdminReports() {
   return (
     <AdminLayout
       title="Relatórios"
-      description="Em manutenção (Debug Build)"
+      description="Visão geral e detalhada das submissões"
     >
-      <div className="p-8 text-center">
-        <h3 className="text-xl font-bold text-slate-700">Reconstruindo...</h3>
-        <p className="text-slate-500">Estamos identificando um erro no processo de build.</p>
+      <div className="space-y-6">
+        {/* Top Controls */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
+            <RefreshCw className={cn("w-4 h-4 mr-2", isLoading && "animate-spin")} />
+            Atualizar
+          </Button>
+
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={downloadCSV}>
+              <FileDown className="w-4 h-4 mr-2 text-green-600" />
+              Exportar CSV
+            </Button>
+            <Button variant="outline" size="sm" onClick={downloadPDF}>
+              <Download className="w-4 h-4 mr-2 text-red-600" />
+              Exportar PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={handlePrint}>
+              <Printer className="w-4 h-4 mr-2 text-slate-600" />
+              Imprimir
+            </Button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <Filters
+          date={date}
+          setDate={setDate}
+          dateRange={dateRange}
+          setDateRange={setDateRange}
+          filterType={filterType}
+          setFilterType={setFilterType}
+          selectedSchool={selectedSchool}
+          setSelectedSchool={setSelectedSchool}
+          selectedStatus={selectedStatus}
+          setSelectedStatus={setSelectedStatus}
+          helpNeededFilter={helpNeededFilter}
+          setHelpNeededFilter={setHelpNeededFilter}
+          schools={schools}
+          statusTranslations={statusTranslations}
+        />
+
+        {/* KPI Cards */}
+        <KpiCards submissions={submissionsRaw} />
+
+        {/* Charts & Activity Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TimeActivityChart data={timeSeries} isLoading={isLoading} />
+          <StatusDistributionChart data={statusChartData} isLoading={isLoading} />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1">
+            <MenuTypeChart submissions={submissionsRaw} isLoading={isLoading} />
+          </div>
+          <div className="lg:col-span-2">
+            <RecentActivity submissions={submissionsRaw} />
+          </div>
+        </div>
+
+        {/* Detailed Logs */}
+        <DetailedActivityLog submissions={submissionsRaw} />
+
+
       </div>
     </AdminLayout>
   );
