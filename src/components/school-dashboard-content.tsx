@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 type InventoryItem = {
     id: string;
@@ -633,7 +635,7 @@ export default function SchoolDashboardContent({ school, isOpen, onClose, hideHe
     const [data, setData] = useState<any[]>([]);
     const [visibleData, setVisibleData] = useState<any[]>([]);
     const [page, setPage] = useState(1);
-    const PAGE_SIZE = 10;
+    const PAGE_SIZE = 50;
 
     const [isLoading, setIsLoading] = useState(false);
     const [schoolSettings, setSchoolSettings] = useState<{ counts?: { morning: number, afternoon: number, night: number }, contacts?: { email: string, whatsapp: string } }>({});
@@ -647,23 +649,14 @@ export default function SchoolDashboardContent({ school, isOpen, onClose, hideHe
     const isModal = isOpen !== undefined;
     const showContent = !isModal || isOpen;
 
+
     useEffect(() => {
         if (school && showContent) {
             setIsLoading(true);
             setPage(1);
 
-            // Fetch all submissions
-            const p1 = fetch(`/api/submissions?school=${encodeURIComponent(school)}`)
-                .then(res => res.json())
-                .then(json => {
-                    const allSubmissions = json.submissions || [];
-                    setData(allSubmissions);
-                    setVisibleData(allSubmissions.slice(0, PAGE_SIZE));
-                })
-                .catch(err => console.error(err));
-
-            // Fetch school settings
-            const p2 = fetch(`/api/schools/settings?school=${encodeURIComponent(school)}`)
+            // Fetch school settings (Keep as fetch usually, or could switch to snapshot too)
+            fetch(`/api/schools/settings?school=${encodeURIComponent(school)}`)
                 .then(res => res.json())
                 .then(json => {
                     const counts = json.settings?.counts || { morning: 0, afternoon: 0, night: 0 };
@@ -673,7 +666,51 @@ export default function SchoolDashboardContent({ school, isOpen, onClose, hideHe
                 })
                 .catch(err => console.error(err));
 
-            Promise.all([p1, p2]).finally(() => setIsLoading(false));
+            // Real-time listener for Submissions
+            const q = query(
+                collection(db, "submissions"),
+                where("school", "==", school)
+                // Removed orderBy to ensure OLD records (without createdAt) are also returned.
+                // Sorting will be done client-side.
+            );
+
+            // Note: orderBy might require an index. If index is missing, it will fail in console.
+            // Safe fallback: client side sort if index missing? 
+            // Better to try/catch the snapshot? onSnapshot error handler handles it.
+
+            const unsubscribe = onSnapshot(q, (snapshot: any) => {
+                const submissions = snapshot.docs.map((doc: any) => {
+                    const d = doc.data();
+                    return {
+                        id: doc.id,
+                        ...d,
+                        date: d.date?.toMillis?.() ?? null,
+                        createdAt: d.createdAt?.toMillis?.() ?? null
+                    };
+                });
+
+                // Client-side sort to handle missing createdAt safely
+                submissions.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+
+                setData(submissions);
+                setVisibleData(submissions.slice(0, PAGE_SIZE));
+                setIsLoading(false);
+            }, (error: any) => {
+                console.error("Snapshot error:", error);
+
+                // Fallback to API if snapshot fails (e.g. permission or index issue)
+                console.warn("Falling back to API fetch due to snapshot error");
+                fetch(`/api/submissions?school=${encodeURIComponent(school)}`)
+                    .then(res => res.json())
+                    .then(json => {
+                        const allSubmissions = json.submissions || [];
+                        setData(allSubmissions);
+                        setVisibleData(allSubmissions.slice(0, PAGE_SIZE));
+                    })
+                    .finally(() => setIsLoading(false));
+            });
+
+            return () => unsubscribe();
         } else {
             setData([]);
             setVisibleData([]);

@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { User, Save, Mail, Loader2, LogOut } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { normalizeSchoolName } from "@/lib/utils";
 
 type SchoolProfile = {
     name: string;
@@ -121,7 +122,19 @@ export default function SchoolSettingsPage() {
 
             } catch (error) {
                 console.error("Error fetching user data:", error);
-                router.push("/login");
+
+                // Fallback Logic
+                if (user.email) {
+                    const derived = normalizeSchoolName(user.email.split('@')[0]) || user.email.split('@')[0].toUpperCase();
+                    setAvailableSchools([derived]);
+
+                    if (!schoolName) {
+                        setSchoolName(derived);
+                        fetchSettings(derived);
+                    }
+                } else {
+                    router.push("/login");
+                }
             }
         });
 

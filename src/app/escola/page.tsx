@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase'; // Import auth from here
+import { normalizeSchoolName } from '@/lib/utils';
 import SchoolDashboardContent from '@/components/school-dashboard-content';
 import { GraduationCap, Loader2, RefreshCcw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,8 @@ export default function SchoolDashboardPage() {
                     // Allow access anyway with email-based school
                     console.warn('⚠️ Unknown role:', userData.role, '- using email-based default');
                     setUserEmail(user.email);
-                    setSchools([user.email.split('@')[0].toUpperCase()]);
+                    const derivedSchool = normalizeSchoolName(user.email?.split('@')[0]) || user.email?.split('@')[0].toUpperCase();
+                    setSchools([derivedSchool]);
                     setLoading(false);
                     return;
                 }
@@ -83,7 +85,8 @@ export default function SchoolDashboardPage() {
                 if (userSchools.length === 0) {
                     console.warn('⚠️ No schools linked - using email-based default');
                     setUserEmail(user.email);
-                    const defaultSchool = user.email.split('@')[0].toUpperCase();
+                    setUserEmail(user.email);
+                    const defaultSchool = normalizeSchoolName(user.email?.split('@')[0]) || user.email?.split('@')[0].toUpperCase();
                     setSchools([defaultSchool]);
                     setActiveTab(defaultSchool);
                     setLoading(false);
@@ -100,7 +103,9 @@ export default function SchoolDashboardPage() {
                 console.error("❌ Error fetching user data:", error);
                 console.log('✅ Allowing access with email-based default school');
                 setUserEmail(user.email);
-                const defaultSchool = user.email.split('@')[0].toUpperCase();
+                console.log('✅ Allowing access with email-based default school');
+                setUserEmail(user.email);
+                const defaultSchool = normalizeSchoolName(user.email?.split('@')[0]) || user.email?.split('@')[0].toUpperCase();
                 setSchools([defaultSchool]);
                 setActiveTab(defaultSchool);
             } finally {

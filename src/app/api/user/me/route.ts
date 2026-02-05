@@ -4,6 +4,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initAdmin, isFirebaseAdminInitialized } from '@/lib/firebase-admin';
 import { AUTH_COOKIE_NAME } from '@/lib/constants';
+import { normalizeSchoolName } from '@/lib/utils';
 
 initAdmin();
 
@@ -71,7 +72,16 @@ export async function GET(request: Request) {
 
             if (email === 'marcosfreiremunicipal@gmail.com') {
                 console.log('🔧 Injecting multi-school access (fallback) for marcosfreiremunicipal@gmail.com');
-                fallbackData.schools = ['MARCOSFREIREMUNICIPAL', 'ANEXO MARCOSFREIRE'];
+                fallbackData.schools = ['MARCOS FREIRE', 'ANEXO MARCOS FREIRE'];
+            } else {
+                // Try to normalize from email
+                const derivedSchool = normalizeSchoolName(email?.split('@')[0]);
+                if (derivedSchool) {
+                    fallbackData.schools = [derivedSchool];
+                } else {
+                    // Fallback to raw if logic fails (better than nothing)
+                    fallbackData.schools = [email?.split('@')[0].toUpperCase()];
+                }
             }
 
             console.log('📤 Returning fallback user data:', fallbackData);
@@ -96,7 +106,14 @@ export async function GET(request: Request) {
 
             if (email === 'marcosfreiremunicipal@gmail.com') {
                 console.log('🔧 Injecting multi-school access (no-firestore) for marcosfreiremunicipal@gmail.com');
-                basicData.schools = ['MARCOSFREIREMUNICIPAL', 'ANEXO MARCOSFREIRE'];
+                basicData.schools = ['MARCOS FREIRE', 'ANEXO MARCOS FREIRE'];
+            } else {
+                const derivedSchool = normalizeSchoolName(email?.split('@')[0]);
+                if (derivedSchool) {
+                    basicData.schools = [derivedSchool];
+                } else {
+                    basicData.schools = [email?.split('@')[0].toUpperCase()];
+                }
             }
 
             return NextResponse.json(basicData);
@@ -112,7 +129,7 @@ export async function GET(request: Request) {
 
         if (userEmail === 'marcosfreiremunicipal@gmail.com') {
             console.log('🔧 Injecting multi-school access for marcosfreiremunicipal@gmail.com');
-            finalUserData.schools = ['MARCOSFREIREMUNICIPAL', 'ANEXO MARCOSFREIRE'];
+            finalUserData.schools = ['MARCOS FREIRE', 'ANEXO MARCOS FREIRE'];
         }
 
         return NextResponse.json(finalUserData);

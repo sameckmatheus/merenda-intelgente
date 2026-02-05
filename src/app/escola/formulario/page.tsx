@@ -23,7 +23,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { cn, normalizeSchoolName } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const formSchema = z.object({
@@ -139,9 +139,10 @@ export default function FormularioPage() {
                     let schoolsList: string[] = [];
 
                     if (email === 'marcosfreiremunicipal@gmail.com') {
-                        schoolsList = ['MARCOSFREIREMUNICIPAL', 'ANEXO MARCOSFREIRE'];
+                        schoolsList = ['MARCOS FREIRE', 'ANEXO MARCOS FREIRE'];
                     } else {
-                        schoolsList = [email.split('@')[0].toUpperCase()];
+                        const derivedSchool = normalizeSchoolName(email.split('@')[0]) || email.split('@')[0].toUpperCase();
+                        schoolsList = [derivedSchool];
                     }
 
                     if (schoolsList.length > 0) {
