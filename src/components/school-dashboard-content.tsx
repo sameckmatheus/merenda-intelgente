@@ -645,6 +645,12 @@ export default function SchoolDashboardContent({ school, isOpen, onClose, hideHe
     const [isInventoryOpen, setIsInventoryOpen] = useState(false);
     const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
 
+    // Filter States
+    const [searchTerm, setSearchTerm] = useState("");
+    const [filterStatus, setFilterStatus] = useState<string>("all");
+    const [filterShift, setFilterShift] = useState<string>("all");
+    const [filterMenuType, setFilterMenuType] = useState<string>("all");
+
     // If isOpen is undefined, assume true (for page usage vs modal usage)
     const isModal = isOpen !== undefined;
     const showContent = !isModal || isOpen;
@@ -718,11 +724,41 @@ export default function SchoolDashboardContent({ school, isOpen, onClose, hideHe
         }
     }, [school, showContent]);
 
+
+
+    // Filter Logic
+    const filteredData = useMemo(() => {
+        return data.filter(item => {
+            // Search Text
+            const searchLower = searchTerm.toLowerCase();
+            const matchesSearch =
+                (item.respondentName || "").toLowerCase().includes(searchLower) ||
+                (item.observations || "").toLowerCase().includes(searchLower) ||
+                (item.alternativeMenuDescription || "").toLowerCase().includes(searchLower) ||
+                (item.missingItems || "").toLowerCase().includes(searchLower);
+
+            // Filters
+            const matchesStatus = filterStatus === "all" || item.status === filterStatus;
+            const matchesShift = filterShift === "all" || item.shift === filterShift;
+            const matchesMenuType = filterMenuType === "all" || item.menuType === filterMenuType;
+
+            return matchesSearch && matchesStatus && matchesShift && matchesMenuType;
+        });
+    }, [data, searchTerm, filterStatus, filterShift, filterMenuType]);
+
+    // Pagination Logic (based on filtered data)
+    useEffect(() => {
+        setPage(1); // Reset page when filters change
+    }, [searchTerm, filterStatus, filterShift, filterMenuType]);
+
+    useEffect(() => {
+        const start = 0;
+        const end = page * PAGE_SIZE;
+        setVisibleData(filteredData.slice(start, end));
+    }, [filteredData, page]);
+
     const handleLoadMore = () => {
-        const nextPage = page + 1;
-        const newVisible = data.slice(0, nextPage * PAGE_SIZE);
-        setVisibleData(newVisible);
-        setPage(nextPage);
+        setPage(prev => prev + 1);
     };
 
     const handleSave = async () => {
@@ -946,7 +982,57 @@ export default function SchoolDashboardContent({ school, isOpen, onClose, hideHe
                                     <h3 className="font-semibold text-slate-800 flex items-center gap-2">
                                         <Clock className="w-4 h-4 text-blue-500" /> Histórico
                                     </h3>
-                                    <Badge variant="outline" className="bg-white">{data.length} registros</Badge>
+                                    <Badge variant="outline" className="bg-white">{filteredData.length} registros</Badge>
+                                </div>
+
+                                {/* Search and Filters Toolbar */}
+                                <div className="p-3 bg-white border-b border-slate-100 grid grid-cols-1 md:grid-cols-4 gap-3">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        <Input
+                                            placeholder="Buscar por nome, obs..."
+                                            className="pl-9 h-9 bg-slate-50 border-slate-200 text-sm"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                        />
+                                    </div>
+
+                                    <Select value={filterShift} onValueChange={setFilterShift}>
+                                        <SelectTrigger className="h-9 bg-slate-50 border-slate-200 text-sm">
+                                            <SelectValue placeholder="Turno" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos os Turnos</SelectItem>
+                                            <SelectItem value="matutino">Matutino</SelectItem>
+                                            <SelectItem value="vespertino">Vespertino</SelectItem>
+                                            <SelectItem value="noturno">Noturno</SelectItem>
+                                            <SelectItem value="integral">Integral</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+
+                                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                                        <SelectTrigger className="h-9 bg-slate-50 border-slate-200 text-sm">
+                                            <SelectValue placeholder="Status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos os Status</SelectItem>
+                                            <SelectItem value="pendente">Pendente</SelectItem>
+                                            <SelectItem value="confirmado">Confirmado</SelectItem>
+                                            <SelectItem value="cancelado">Cancelado</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+
+                                    <Select value={filterMenuType} onValueChange={setFilterMenuType}>
+                                        <SelectTrigger className="h-9 bg-slate-50 border-slate-200 text-sm">
+                                            <SelectValue placeholder="Tipo de Cardápio" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos os Tipos</SelectItem>
+                                            <SelectItem value="planned">Previsto</SelectItem>
+                                            <SelectItem value="alternative">Alternativo</SelectItem>
+                                            <SelectItem value="improvised">Improvisado</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                                 <div className="overflow-x-auto w-full">
@@ -999,10 +1085,10 @@ export default function SchoolDashboardContent({ school, isOpen, onClose, hideHe
                                     </Table>
                                 </div>
 
-                                {visibleData.length < data.length && (
+                                {visibleData.length < filteredData.length && (
                                     <div className="p-3 bg-slate-50 border-t border-slate-100 text-center">
                                         <Button variant="ghost" className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-sm h-9" onClick={handleLoadMore}>
-                                            Carregar mais registros ({data.length - visibleData.length} restantes)
+                                            Carregar mais registros ({filteredData.length - visibleData.length} restantes)
                                         </Button>
                                     </div>
                                 )}

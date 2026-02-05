@@ -143,7 +143,7 @@ export default function SchoolDashboardPage() {
                 {/* Header with Switcher */}
                 {activeTab && (
                     <div className="flex flex-col space-y-6">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm">
                             <div className="flex items-center gap-3">
                                 <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
                                     <GraduationCap className="h-6 w-6" />
@@ -162,7 +162,7 @@ export default function SchoolDashboardPage() {
                                         setActiveTab(schools[nextIndex]);
                                     }}
                                     variant="outline"
-                                    className="w-full sm:w-auto border-blue-200 hover:bg-blue-50 text-blue-700 gap-2 h-10"
+                                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 hover:text-white text-white gap-2 h-10"
                                 >
                                     <RefreshCcw className="h-4 w-4" />
                                     Trocar de Escola
