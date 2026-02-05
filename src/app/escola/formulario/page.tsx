@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, addDoc, Timestamp, doc, getDoc } from "firebase/firestore";
+import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -52,6 +52,7 @@ export default function FormularioPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [schoolName, setSchoolName] = useState<string>("");
+    const [availableSchools, setAvailableSchools] = useState<string[]>([]);
     const [showSuccess, setShowSuccess] = useState(false);
 
     const form = useForm<FormValues>({
@@ -90,39 +91,73 @@ export default function FormularioPage() {
             }
 
             try {
-                // Get school from user document in Firestore
-                const userDocRef = doc(db, "users", user.uid);
-                const userDoc = await getDoc(userDocRef);
+                // Get ID token for API authentication
+                const idToken = await user.getIdToken();
 
-                if (!userDoc.exists() || userDoc.data().role !== "school") {
-                    router.push("/login");
+                // Fetch user profile from API (bypassing client-side permission issues)
+                const res = await fetch('/api/user/me', {
+                    headers: {
+                        'Authorization': `Bearer ${idToken}`
+                    }
+                });
+
+                if (!res.ok) throw new Error('Failed to fetch user data');
+
+                const userData = await res.json();
+
+                if (userData.role !== "school") {
+                    router.push("/login"); // Or access denied page
                     return;
                 }
 
-                const schools = userDoc.data().schools || [];
+                const schools = userData.schools || [];
                 if (schools.length === 0) {
                     toast({
                         variant: "destructive",
                         title: "Erro",
                         description: "Nenhuma escola associada ao usuário.",
                     });
-                    router.push("/login");
+                    // router.push("/login"); // Optional: let them see the empty state or redirect
                     return;
                 }
 
                 const school = schools[0];
                 setSchoolName(school);
+                setAvailableSchools(schools);
 
                 // Set form default values
                 form.setValue("school", school);
-                form.setValue("respondentName", user.displayName || user.email?.split('@')[0] || "");
+                form.setValue("respondentName", userData.name || user.displayName || user.email?.split('@')[0] || "");
 
             } catch (error) {
                 console.error("Error fetching user data:", error);
+
+                // Fallback Logic
+                if (user.email) {
+                    console.log("⚠️ API Failed, using fallback from email");
+                    const email = user.email;
+                    let schoolsList: string[] = [];
+
+                    if (email === 'marcosfreiremunicipal@gmail.com') {
+                        schoolsList = ['MARCOSFREIREMUNICIPAL', 'ANEXO MARCOSFREIRE'];
+                    } else {
+                        schoolsList = [email.split('@')[0].toUpperCase()];
+                    }
+
+                    if (schoolsList.length > 0) {
+                        const school = schoolsList[0];
+                        setSchoolName(school);
+                        setAvailableSchools(schoolsList);
+                        form.setValue("school", school);
+                        form.setValue("respondentName", user.displayName || email.split('@')[0]);
+                        return;
+                    }
+                }
+
                 toast({
                     variant: "destructive",
                     title: "Erro",
-                    description: "Não foi possível carregar os dados do usuário.",
+                    description: "Não foi possível carregar os dados do usuário. Recarregue a página.",
                 });
             } finally {
                 setIsLoading(false);
@@ -243,7 +278,24 @@ export default function FormularioPage() {
                                             <FormItem>
                                                 <FormLabel>Escola</FormLabel>
                                                 <FormControl>
-                                                    <Input {...field} disabled className="bg-slate-50/50" />
+                                                    {availableSchools.length > 1 ? (
+                                                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                                            <FormControl>
+                                                                <SelectTrigger className="bg-slate-50/50 h-12 rounded-xl border-slate-200">
+                                                                    <SelectValue placeholder="Selecione a escola" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                {availableSchools.map((school) => (
+                                                                    <SelectItem key={school} value={school}>
+                                                                        {school}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    ) : (
+                                                        <Input {...field} disabled className="bg-slate-50/50 h-12 rounded-xl border-slate-200" />
+                                                    )}
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>

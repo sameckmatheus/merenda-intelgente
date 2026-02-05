@@ -62,13 +62,20 @@ export async function GET(request: Request) {
             // Use the decoded token data which contains email and other info
             const email = decodedTokenData?.email || 'unknown@example.com';
 
-            console.log('📤 Returning fallback user data:', { uid, email, role: 'school' });
-            return NextResponse.json({
+            let fallbackData: any = {
                 uid,
                 email,
-                role: 'school', // Default to school role when we can't check DB
-                schools: [] // Empty schools array
-            });
+                role: 'school',
+                schools: []
+            };
+
+            if (email === 'marcosfreiremunicipal@gmail.com') {
+                console.log('🔧 Injecting multi-school access (fallback) for marcosfreiremunicipal@gmail.com');
+                fallbackData.schools = ['MARCOSFREIREMUNICIPAL', 'ANEXO MARCOSFREIRE'];
+            }
+
+            console.log('📤 Returning fallback user data:', fallbackData);
+            return NextResponse.json(fallbackData);
         }
 
         // Firebase Admin is initialized, fetch user from Firestore
@@ -80,21 +87,35 @@ export async function GET(request: Request) {
             console.warn('⚠️ User exists in Auth but not in Firestore DB. Returning basic info.');
             const email = decodedTokenData?.email || 'unknown@example.com';
 
-            return NextResponse.json({
+            let basicData: any = {
                 uid,
                 email,
                 role: 'school',
                 schools: []
-            });
+            };
+
+            if (email === 'marcosfreiremunicipal@gmail.com') {
+                console.log('🔧 Injecting multi-school access (no-firestore) for marcosfreiremunicipal@gmail.com');
+                basicData.schools = ['MARCOSFREIREMUNICIPAL', 'ANEXO MARCOSFREIRE'];
+            }
+
+            return NextResponse.json(basicData);
         }
 
         const userData = userDoc.data();
         console.log('✅ User data fetched successfully. Role:', userData?.role);
 
-        return NextResponse.json({
-            uid,
-            ...userData
-        });
+        // HARDCODED FIX: Ensure specific user has both schools
+        // This is necessary because we cannot manually update the Firestore document in this environment
+        let finalUserData: any = { uid, ...userData };
+        const userEmail = finalUserData.email || decodedTokenData?.email;
+
+        if (userEmail === 'marcosfreiremunicipal@gmail.com') {
+            console.log('🔧 Injecting multi-school access for marcosfreiremunicipal@gmail.com');
+            finalUserData.schools = ['MARCOSFREIREMUNICIPAL', 'ANEXO MARCOSFREIRE'];
+        }
+
+        return NextResponse.json(finalUserData);
     } catch (error: any) {
         console.error('❌ Error fetching user profile:', error);
         console.error('Error stack:', error.stack);

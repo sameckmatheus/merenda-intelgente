@@ -11,8 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { User, Save, Mail, Loader2, LogOut } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type SchoolProfile = {
     name: string;
@@ -50,6 +49,33 @@ export default function SchoolSettingsPage() {
         },
     });
 
+    const [availableSchools, setAvailableSchools] = useState<string[]>([]);
+
+    const fetchSettings = async (school: string) => {
+        setIsLoading(true);
+        try {
+            const response = await fetch(`/api/schools/settings?school=${encodeURIComponent(school)}`);
+            if (response.ok) {
+                const data = await response.json();
+                setSchoolProfile(prev => ({
+                    ...prev,
+                    name: school, // Update name
+                    contacts: data.settings?.contacts || { email: "", whatsapp: "" },
+                    studentCounts: data.settings?.counts || { morning: 0, afternoon: 0, night: 0 }, // API returns 'counts' not 'studentCounts' based on SchoolDashboardContent
+                }));
+            }
+        } catch (error) {
+            console.error("Error fetching settings:", error);
+            toast({
+                title: "Erro",
+                description: "Não foi possível carregar as configurações.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     useEffect(() => {
         const auth = getAuth();
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -59,55 +85,54 @@ export default function SchoolSettingsPage() {
             }
 
             setUserEmail(user.email);
+            setSchoolProfile(prev => ({ ...prev, email: user.email || "" }));
 
             try {
-                // Get school from user document
-                const userDocRef = doc(db, "users", user.uid);
-                const userDoc = await getDoc(userDocRef);
+                // Fetch user data from API to get accurate schools list (handling exceptions/patches)
+                const idToken = await user.getIdToken();
+                const res = await fetch('/api/user/me', {
+                    headers: {
+                        'Authorization': `Bearer ${idToken}`
+                    }
+                });
 
-                if (!userDoc.exists() || userDoc.data().role !== "school") {
+                if (!res.ok) throw new Error('Failed to fetch user data');
+                const userData = await res.json();
+
+                if (userData.role !== "school") {
                     router.push("/login");
                     return;
                 }
 
-                const schools = userDoc.data().schools || [];
+                const schools = userData.schools || [];
                 if (schools.length === 0) {
                     router.push("/login");
                     return;
                 }
 
-                const school = schools[0];
-                setSchoolName(school);
+                setAvailableSchools(schools);
 
-                // Fetch school settings from API
-                const response = await fetch(`/api/schools/settings?school=${encodeURIComponent(school)}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.settings) {
-                        setSchoolProfile({
-                            name: school,
-                            email: user.email,
-                            contacts: data.settings.contacts || { email: "", whatsapp: "" },
-                            studentCounts: data.settings.studentCounts || { morning: 0, afternoon: 0, night: 0 },
-                        });
-                    } else {
-                        setSchoolProfile(prev => ({ ...prev, name: school, email: user.email || "" }));
-                    }
+                // Select first school by default if none selected
+                if (!schoolName) {
+                    const initialSchool = schools[0];
+                    setSchoolName(initialSchool);
+                    fetchSettings(initialSchool);
                 }
+
             } catch (error) {
-                console.error("Error fetching settings:", error);
-                toast({
-                    title: "Erro",
-                    description: "Não foi possível carregar as configurações.",
-                    variant: "destructive"
-                });
-            } finally {
-                setIsLoading(false);
+                console.error("Error fetching user data:", error);
+                router.push("/login");
             }
         });
 
         return () => unsubscribe();
-    }, [router, toast]);
+    }, [router, schoolName]);
+
+    const handleSchoolChange = (newSchool: string) => {
+        setSchoolName(newSchool);
+        fetchSettings(newSchool);
+    };
+
 
     const handleSaveSettings = async () => {
         setIsSaving(true);
@@ -157,12 +182,25 @@ export default function SchoolSettingsPage() {
                     <p className="text-slate-500 mt-1">Gerencie as informações da sua escola</p>
                 </div>
 
+                {availableSchools.length > 1 && (
+                    <div className="bg-white p-4 rounded-xl border shadow-sm space-y-2">
+                        <Label>Selecionar Escola</Label>
+                        <Select value={schoolName} onValueChange={handleSchoolChange}>
+                            <SelectTrigger className="w-full md:w-[300px]">
+                                <SelectValue placeholder="Selecione a escola" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {availableSchools.map((school) => (
+                                    <SelectItem key={school} value={school}>
+                                        {school}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+
                 <Tabs defaultValue="school" className="w-full space-y-6">
-                    <TabsList className="bg-white border text-slate-600">
-                        <TabsTrigger value="school" className="data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">
-                            <User className="w-4 h-4 mr-2" /> Escola
-                        </TabsTrigger>
-                    </TabsList>
 
                     <TabsContent value="school" className="space-y-6">
                         <Card className="border-0 shadow-sm bg-white/50 backdrop-blur-sm">
