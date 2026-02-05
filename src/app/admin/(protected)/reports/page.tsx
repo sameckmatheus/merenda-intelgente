@@ -7,8 +7,8 @@ import { AdminLayout } from "@/components/admin/admin-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Download, FileText, ShoppingCart, HelpCircle, TrendingUp, TrendingDown, Activity, Calendar as CalendarIcon, AlertTriangle, BarChart, ShoppingBasket, Printer, RefreshCw, FileDown } from 'lucide-react';
-// import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-// import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, AreaChart, Area, Tooltip, ResponsiveContainer } from "recharts";
+import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, AreaChart, Area, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 // import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -110,9 +110,9 @@ const StatusDistributionChart: FC<{ data: { name: string, value: number }[], isL
                 </Pie>
                 <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
                 <ChartLegend
-                  content={({ payload }) => (
+                  content={({ payload }: { payload?: any[] }) => (
                     <div className="flex justify-center gap-4 mt-4 flex-wrap">
-                      {payload?.map((entry: any, index) => (
+                      {payload?.map((entry: any, index: number) => (
                         <div key={`legend-${index}`} className="flex items-center gap-2 text-sm text-slate-600">
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
                           <span className="capitalize">{entry.payload?.label || entry.value}</span>

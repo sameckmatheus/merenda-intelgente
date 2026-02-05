@@ -8,18 +8,23 @@ import { AUTH_COOKIE_NAME } from '@/lib/constants';
 initAdmin();
 
 export async function GET(request: Request) {
+    console.log('📋 /api/user/me - Request received');
+
     try {
         let uid: string | undefined;
+        let decodedTokenData: any = null;
 
         // 1. Try Authorization Header (Bearer Token)
         const authHeader = request.headers.get('Authorization');
         if (authHeader && authHeader.startsWith('Bearer ')) {
             const idToken = authHeader.split('Bearer ')[1];
+            console.log('🔑 Attempting to verify Bearer token');
             try {
-                const decodedToken = await getAuth().verifyIdToken(idToken);
-                uid = decodedToken.uid;
+                decodedTokenData = await getAuth().verifyIdToken(idToken);
+                uid = decodedTokenData.uid;
+                console.log('✅ Bearer token verified for UID:', uid);
             } catch (e) {
-                console.warn("Invalid Bearer token:", e);
+                console.warn("⚠️ Invalid Bearer token:", e);
             }
         }
 
@@ -29,56 +34,73 @@ export async function GET(request: Request) {
             const sessionCookie = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 
             if (sessionCookie) {
+                console.log('🍪 Attempting to verify session cookie');
                 try {
-                    const decodedClaims = await getAuth().verifySessionCookie(sessionCookie, true);
-                    uid = decodedClaims.uid;
+                    decodedTokenData = await getAuth().verifySessionCookie(sessionCookie, true);
+                    uid = decodedTokenData.uid;
+                    console.log('✅ Session cookie verified for UID:', uid);
                 } catch (e) {
-                    console.warn("Invalid Session Cookie:", e);
+                    console.warn("⚠️ Invalid Session Cookie:", e);
                 }
+            } else {
+                console.warn('⚠️ No session cookie found');
             }
         }
 
         if (!uid) {
+            console.error('❌ No valid authentication found - returning 401');
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!isFirebaseAdminInitialized()) {
-            console.warn("Firebase Admin not initialized (missing credentials). Returning basic auth info.");
-            // Fallback: If we can't check Firestore, we can't verify role strictly server-side.
-            // But we know the user is authenticated via ID token.
-            // We return the UID and a default role of 'school' (or 'admin' if we could decode claims, but standard claims don't have it).
-            // Actually, we can't safely assume 'admin' without DB. 
-            // We will return 'school' as safer default and let client side redirect if needed (though client side might also fail to read DB if rules block it).
-            // Wait, if client-side DB read is blocked, and server-side DB read is impossible (no creds), we are stuck.
+        // Check if Firebase Admin is initialized
+        const adminInitialized = isFirebaseAdminInitialized();
+        console.log(`🔧 Firebase Admin initialized: ${adminInitialized}`);
 
-            // HOWEVER, we can just return success with the UID. The client dashboard might try to fetch specific school data.
-            // If that fails, it fails. But at least we pass the "profile check".
+        if (!adminInitialized) {
+            console.warn("⚠️ Firebase Admin not initialized (missing credentials). Using decoded token data as fallback.");
+
+            // Use the decoded token data which contains email and other info
+            const email = decodedTokenData?.email || 'unknown@example.com';
+
+            console.log('📤 Returning fallback user data:', { uid, email, role: 'school' });
             return NextResponse.json({
                 uid,
-                email: 'user@example.com', // We don't have email from verifyIdToken unless we decoded it fully. verifyIdToken returns DecodedIdToken which HAS email.
-                role: 'school', // Defaulting to school to allow access.
-                schools: [] // Empty schools
+                email,
+                role: 'school', // Default to school role when we can't check DB
+                schools: [] // Empty schools array
             });
         }
 
+        // Firebase Admin is initialized, fetch user from Firestore
+        console.log('🔍 Fetching user data from Firestore for UID:', uid);
         const db = getFirestore();
         const userDoc = await db.collection('users').doc(uid).get();
 
         if (!userDoc.exists) {
-            // If user exists in Auth but not in DB, return basic info so they don't get stuck in error loop.
+            console.warn('⚠️ User exists in Auth but not in Firestore DB. Returning basic info.');
+            const email = decodedTokenData?.email || 'unknown@example.com';
+
             return NextResponse.json({
                 uid,
+                email,
                 role: 'school',
                 schools: []
             });
         }
 
+        const userData = userDoc.data();
+        console.log('✅ User data fetched successfully. Role:', userData?.role);
+
         return NextResponse.json({
             uid,
-            ...userDoc.data()
+            ...userData
         });
-    } catch (error) {
-        console.error('Error fetching user profile:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    } catch (error: any) {
+        console.error('❌ Error fetching user profile:', error);
+        console.error('Error stack:', error.stack);
+        return NextResponse.json({
+            error: 'Internal Server Error',
+            message: error.message
+        }, { status: 500 });
     }
 }

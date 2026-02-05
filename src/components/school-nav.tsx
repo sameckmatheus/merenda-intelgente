@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 const schoolMenuItems = [
     { title: "Painel", href: "/escola", icon: LayoutDashboard },
-    { title: "Formulário", href: "/", icon: FileText },
+    { title: "Formulário", href: "/escola/formulario", icon: FileText },
     { title: "Cardápio", href: "/escola/cardapio", icon: Utensils },
     { title: "Configurações", href: "/escola/configuracoes", icon: Settings },
 ];
