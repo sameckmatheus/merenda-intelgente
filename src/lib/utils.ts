@@ -34,3 +34,13 @@ export function normalizeSchoolName(input: string | undefined | null): string | 
   // Fallback: Return null if no match found (caller should handle default)
   return null;
 }
+
+/**
+ * Get the official full name for a school given its short identifier
+ * @param shortName - The short school name (e.g., "DILMA")
+ * @returns The full official school name or the short name if not found
+ */
+export function getFullSchoolName(shortName: string): string {
+  const { SCHOOL_FULL_NAMES } = require('@/lib/constants');
+  return SCHOOL_FULL_NAMES[shortName] || shortName;
+}

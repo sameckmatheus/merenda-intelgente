@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getFullSchoolName } from "@/lib/utils";
 
 type InventoryItem = {
     id: string;
@@ -803,7 +804,7 @@ export default function SchoolDashboardContent({ school, isOpen, onClose, hideHe
                                     <div className="p-2 bg-blue-100 rounded-lg text-blue-600 shrink-0">
                                         <GraduationCap className="w-6 h-6" />
                                     </div>
-                                    {school}
+                                    {getFullSchoolName(school || "")}
                                 </h1>
                                 <p className="text-sm text-slate-500 text-left mt-1">
                                     Visão geral e monitoramento da unidade escolar.
@@ -978,11 +979,32 @@ export default function SchoolDashboardContent({ school, isOpen, onClose, hideHe
 
                             {/* History Table */}
                             <div className="flex flex-col w-full bg-white rounded-xl shadow-sm overflow-hidden">
-                                <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                                     <h3 className="font-semibold text-slate-800 flex items-center gap-2">
                                         <Clock className="w-4 h-4 text-blue-500" /> Histórico
                                     </h3>
-                                    <Badge variant="outline" className="bg-white">{filteredData.length} registros</Badge>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        {(searchTerm || filterStatus !== 'all' || filterShift !== 'all' || filterMenuType !== 'all') && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setSearchTerm("");
+                                                    setFilterStatus("all");
+                                                    setFilterShift("all");
+                                                    setFilterMenuType("all");
+                                                }}
+                                                className="h-7 text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                                            >
+                                                <X className="w-3 h-3 mr-1" /> Limpar Filtros
+                                            </Button>
+                                        )}
+                                        <Badge variant="outline" className="bg-white">
+                                            {visibleData.length === filteredData.length
+                                                ? `${filteredData.length} de ${data.length}`
+                                                : `Mostrando ${visibleData.length} de ${filteredData.length} (${data.length} total)`}
+                                        </Badge>
+                                    </div>
                                 </div>
 
                                 {/* Search and Filters Toolbar */}
@@ -1034,6 +1056,37 @@ export default function SchoolDashboardContent({ school, isOpen, onClose, hideHe
                                         </SelectContent>
                                     </Select>
                                 </div>
+
+                                {/* Active Filter Indicators */}
+                                {(searchTerm || filterStatus !== 'all' || filterShift !== 'all' || filterMenuType !== 'all') && (
+                                    <div className="px-3 pb-2 pt-0 bg-white border-b border-slate-100 flex flex-wrap gap-2">
+                                        <span className="text-xs text-slate-500 self-center">Filtros ativos:</span>
+                                        {searchTerm && (
+                                            <Badge variant="secondary" className="text-xs gap-1">
+                                                Busca: "{searchTerm}"
+                                                <X className="w-3 h-3 cursor-pointer" onClick={() => setSearchTerm("")} />
+                                            </Badge>
+                                        )}
+                                        {filterShift !== 'all' && (
+                                            <Badge variant="secondary" className="text-xs gap-1">
+                                                Turno: {filterShift}
+                                                <X className="w-3 h-3 cursor-pointer" onClick={() => setFilterShift("all")} />
+                                            </Badge>
+                                        )}
+                                        {filterStatus !== 'all' && (
+                                            <Badge variant="secondary" className="text-xs gap-1">
+                                                Status: {filterStatus}
+                                                <X className="w-3 h-3 cursor-pointer" onClick={() => setFilterStatus("all")} />
+                                            </Badge>
+                                        )}
+                                        {filterMenuType !== 'all' && (
+                                            <Badge variant="secondary" className="text-xs gap-1">
+                                                Tipo: {filterMenuType === 'planned' ? 'Previsto' : filterMenuType === 'alternative' ? 'Alternativo' : 'Improvisado'}
+                                                <X className="w-3 h-3 cursor-pointer" onClick={() => setFilterMenuType("all")} />
+                                            </Badge>
+                                        )}
+                                    </div>
+                                )}
 
                                 <div className="overflow-x-auto w-full">
                                     <Table className="w-full">

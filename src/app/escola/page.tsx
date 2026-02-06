@@ -10,6 +10,7 @@ import { normalizeSchoolName } from '@/lib/utils';
 import SchoolDashboardContent from '@/components/school-dashboard-content';
 import { GraduationCap, Loader2, RefreshCcw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { getFullSchoolName } from "@/lib/utils";
 
 export default function SchoolDashboardPage() {
     const router = useRouter();
@@ -150,7 +151,7 @@ export default function SchoolDashboardPage() {
                                 </div>
                                 <div>
                                     <p className="text-xs font-bold text-blue-600 tracking-wider uppercase">Unidade Escolar</p>
-                                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{activeTab}</h1>
+                                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{getFullSchoolName(activeTab)}</h1>
                                 </div>
                             </div>
 
