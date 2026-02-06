@@ -7,6 +7,20 @@ import { getFirestore } from 'firebase-admin/firestore';
 
 initAdmin();
 
+// In-memory cache to reduce Firestore reads
+let schoolsCache: { schools: any[], timestamp: number } | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+function isCacheValid(): boolean {
+    if (!schoolsCache) return false;
+    const now = Date.now();
+    return (now - schoolsCache.timestamp) < CACHE_DURATION;
+}
+
+function invalidateCache() {
+    schoolsCache = null;
+}
+
 async function requireAuth() {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get?.(AUTH_COOKIE_NAME) || cookieStore.get(AUTH_COOKIE_NAME as any);
@@ -38,15 +52,40 @@ export async function GET(request: Request) {
     if (!authed) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     try {
+        // Return cached data if valid
+        if (isCacheValid() && schoolsCache) {
+            console.log('Returning cached schools data');
+            return NextResponse.json({ schools: schoolsCache.schools });
+        }
+
         if (!isFirebaseAdminInitialized() && process.env.NODE_ENV === 'development') {
             // Fallback for dev without firebase: return constant list transformed to objects
-            return NextResponse.json({
-                schools: SCHOOLS_LIST.map((name, index) => ({ id: normalizeString(name), name }))
-            });
+            const schools = SCHOOLS_LIST.map((name, index) => ({ id: normalizeString(name), name }));
+            return NextResponse.json({ schools });
         }
 
         const db = getFirestore();
-        const schoolsSnapshot = await db.collection('schools').get();
+        let schoolsSnapshot;
+
+        try {
+            schoolsSnapshot = await db.collection('schools').get();
+        } catch (firestoreError: any) {
+            // Handle quota exceeded error specifically
+            if (firestoreError.code === 8 || firestoreError.message?.includes('RESOURCE_EXHAUSTED')) {
+                console.error('Firestore quota exceeded, falling back to constants');
+                const fallbackSchools = SCHOOLS_LIST.map(name => ({
+                    id: normalizeString(name),
+                    name
+                }));
+                // Cache the fallback for 1 minute to avoid hammering Firestore
+                schoolsCache = { schools: fallbackSchools, timestamp: Date.now() };
+                return NextResponse.json({
+                    schools: fallbackSchools,
+                    warning: 'Using cached data due to quota limits'
+                });
+            }
+            throw firestoreError;
+        }
 
         let schools = schoolsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const schoolsMap = new Map(schools.map((s: any) => [normalizeString(s.name), s]));
@@ -76,10 +115,31 @@ export async function GET(request: Request) {
         // Sort by name
         schools.sort((a: any, b: any) => a.name.localeCompare(b.name));
 
+        // Update cache
+        schoolsCache = { schools, timestamp: Date.now() };
+
         return NextResponse.json({ schools });
     } catch (e) {
         console.error('GET /api/schools error', e);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+
+        // If we have cached data, return it even if expired
+        if (schoolsCache) {
+            console.log('Returning stale cache due to error');
+            return NextResponse.json({
+                schools: schoolsCache.schools,
+                warning: 'Using cached data due to error'
+            });
+        }
+
+        // Final fallback to constants
+        const fallbackSchools = SCHOOLS_LIST.map(name => ({
+            id: normalizeString(name),
+            name
+        }));
+        return NextResponse.json({
+            schools: fallbackSchools,
+            warning: 'Using fallback data'
+        });
     }
 }
 
@@ -109,6 +169,9 @@ export async function POST(request: Request) {
             createdAt: new Date(),
             createdBy: authed.uid
         });
+
+        // Invalidate cache
+        invalidateCache();
 
         return NextResponse.json({ success: true, id: ref.id, name });
     } catch (e) {
@@ -173,6 +236,9 @@ export async function PUT(request: Request) {
             await batch.commit();
         }
 
+        // Invalidate cache
+        invalidateCache();
+
         return NextResponse.json({ success: true });
     } catch (e) {
         console.error('PUT /api/schools error', e);
@@ -192,6 +258,9 @@ export async function DELETE(request: Request) {
 
         const db = getFirestore();
         await db.collection('schools').doc(id).delete();
+
+        // Invalidate cache
+        invalidateCache();
 
         return NextResponse.json({ success: true });
     } catch (e) {

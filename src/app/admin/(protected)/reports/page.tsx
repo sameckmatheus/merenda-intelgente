@@ -336,7 +336,7 @@ const MenuTypeChart: FC<{ submissions: any[], isLoading: boolean }> = ({ submiss
         {isLoading ? (
           <div className="h-64 flex items-center justify-center text-slate-400">Carregando...</div>
         ) : data.some(d => d.value > 0) ? (
-          <div className="h-72">
+          <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <RechartsBarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
@@ -347,7 +347,7 @@ const MenuTypeChart: FC<{ submissions: any[], isLoading: boolean }> = ({ submiss
                   cursor={{ fill: '#f1f5f9', opacity: 0.3 }}
                   formatter={(value: number) => [value, 'Registros']}
                 />
-                <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={40}>
+                <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={50}>
                   {data.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
@@ -1044,22 +1044,43 @@ export default function AdminReports() {
     >
       <div className="space-y-6">
         {/* Top Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="w-full sm:w-auto"
+          >
             <RefreshCw className={cn("w-4 h-4 mr-2", isLoading && "animate-spin")} />
             Atualizar
           </Button>
 
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={downloadCSV}>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={downloadCSV}
+              className="w-full sm:w-auto border-emerald-200 hover:bg-emerald-50"
+            >
               <FileDown className="w-4 h-4 mr-2 text-green-600" />
               Exportar CSV
             </Button>
-            <Button variant="outline" size="sm" onClick={downloadPDF}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={downloadPDF}
+              className="w-full sm:w-auto border-red-200 hover:bg-red-50"
+            >
               <Download className="w-4 h-4 mr-2 text-red-600" />
               Exportar PDF
             </Button>
-            <Button variant="outline" size="sm" onClick={handlePrint}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrint}
+              className="w-full sm:w-auto border-slate-200 hover:bg-slate-50"
+            >
               <Printer className="w-4 h-4 mr-2 text-slate-600" />
               Imprimir
             </Button>
@@ -1093,13 +1114,9 @@ export default function AdminReports() {
           <StatusDistributionChart data={statusChartData} isLoading={isLoading} />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1">
-            <MenuTypeChart submissions={submissionsRaw} isLoading={isLoading} />
-          </div>
-          <div className="lg:col-span-2">
-            <RecentActivity submissions={submissionsRaw} onItemClick={setSelectedSubmission} />
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <MenuTypeChart submissions={submissionsRaw} isLoading={isLoading} />
+          <RecentActivity submissions={submissionsRaw} onItemClick={setSelectedSubmission} />
         </div>
 
         {/* Detailed Logs */}
@@ -1107,11 +1124,19 @@ export default function AdminReports() {
 
       </div>
 
-      {/* Side Sheet Modal for Detailed View */}
+      {/* Side Sheet Modal for Detailed View - Bottom sheet on mobile, Side sheet on desktop */}
       <Sheet open={!!selectedSubmission} onOpenChange={(open) => !open && setSelectedSubmission(null)}>
-        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto z-50">
+        <SheetContent
+          className="w-full sm:max-w-3xl overflow-y-auto sm:top-20 sm:h-[calc(100vh-5rem)] h-[85vh] rounded-t-2xl sm:rounded-none"
+          side="bottom"
+        >
           {selectedSubmission && (
             <>
+              {/* Drag Handle for Mobile */}
+              <div className="sm:hidden flex justify-center pb-4 -mt-2">
+                <div className="w-12 h-1.5 bg-slate-300 rounded-full" />
+              </div>
+
               <SheetHeader className="space-y-4">
                 <div className="flex items-start gap-3">
                   <div className="p-3 bg-blue-100 rounded-lg shrink-0">
@@ -1145,20 +1170,20 @@ export default function AdminReports() {
               </SheetHeader>
 
               {/* Action Buttons */}
-              <div className="flex gap-2 flex-wrap mt-6 mb-4">
-                <Button variant="outline" size="sm" className="border-emerald-200 hover:bg-emerald-50">
+              <div className="flex flex-col sm:flex-row gap-2 flex-wrap mt-6 mb-4">
+                <Button variant="outline" size="sm" className="w-full sm:w-auto border-emerald-200 hover:bg-emerald-50">
                   <MessageSquare className="w-4 h-4 mr-2 text-emerald-600" />
                   WhatsApp
                 </Button>
-                <Button variant="outline" size="sm" className="border-blue-200 hover:bg-blue-50">
+                <Button variant="outline" size="sm" className="w-full sm:w-auto border-blue-200 hover:bg-blue-50">
                   <Mail className="w-4 h-4 mr-2 text-blue-600" />
                   Email
                 </Button>
-                <Button variant="outline" size="sm" className="border-slate-200 hover:bg-slate-50">
+                <Button variant="outline" size="sm" className="w-full sm:w-auto border-slate-200 hover:bg-slate-50">
                   <History className="w-4 h-4 mr-2 text-slate-600" />
                   Ver Histórico
                 </Button>
-                <Button variant="outline" size="sm" className="border-slate-200 hover:bg-slate-50">
+                <Button variant="outline" size="sm" className="w-full sm:w-auto border-slate-200 hover:bg-slate-50">
                   <FileDownIcon className="w-4 h-4 mr-2 text-slate-600" />
                   Exportar
                 </Button>

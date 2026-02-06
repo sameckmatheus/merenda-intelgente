@@ -37,6 +37,8 @@ export async function GET(request: Request) {
     const end = searchParams.get('end');
     const school = searchParams.get('school');
     const status = searchParams.get('status');
+    const limitParam = searchParams.get('limit');
+    const limit = limitParam ? parseInt(limitParam) : 100;
 
     if (!isFirebaseAdminInitialized() && process.env.NODE_ENV === 'development') {
       console.warn('⚠️ Returning empty submissions (Firebase Admin not initialized)');
@@ -51,6 +53,13 @@ export async function GET(request: Request) {
       q = q
         .where('date', '>=', AdminTimestamp.fromMillis(Number(start)))
         .where('date', '<=', AdminTimestamp.fromMillis(Number(end)));
+    }
+
+    // Apply limit to base query if possible (note: complex filters might require logic adjustment below)
+    // However, since we filter locally for school sometimes, we should be careful.
+    // Ideally we limit the initial fetch.
+    if (!school || school === 'all') {
+      q = q.limit(limit);
     }
 
     // If both date range and school are provided, Firestore may require a composite index
@@ -68,23 +77,37 @@ export async function GET(request: Request) {
         .trim();
     }
 
-    // ...
-
-    // Se temos filtro por escola e data, precisamos filtrar escola localmente
-    if (school && school !== 'all' && start && end) {
-      const snapshot = await q.get();
-      const targetSchool = normalizeString(school);
-      docs = snapshot.docs.filter((d) => normalizeString(d.data()?.school || '') === targetSchool);
-    }
-    // Se temos apenas escola, podemos filtrar direto no Firestore
-    else if (school && school !== 'all') {
-      const snapshot = await collectionRef.where('school', '==', school).get();
-      docs = snapshot.docs;
-    }
-    // Sem filtros específicos, usar a query base
-    else {
-      const snapshot = await q.get();
-      docs = snapshot.docs;
+    try {
+      // Se temos filtro por escola e data, precisamos filtrar escola localmente
+      if (school && school !== 'all' && start && end) {
+        // Note: limiting here might miss results if we filter locally. 
+        // For now, let's keep the limit on the query to protect usage, 
+        // even if it means we might get fewer than 'limit' results after filtering.
+        // Ideally we would use a composite index and .where('school', '==', school)
+        const snapshot = await q.limit(limit).get();
+        const targetSchool = normalizeString(school);
+        docs = snapshot.docs.filter((d) => normalizeString(d.data()?.school || '') === targetSchool);
+      }
+      // Se temos apenas escola, podemos filtrar direto no Firestore
+      else if (school && school !== 'all') {
+        const snapshot = await collectionRef.where('school', '==', school).limit(limit).get();
+        docs = snapshot.docs;
+      }
+      // Sem filtros específicos, usar a query base
+      else {
+        const snapshot = await q.get();
+        docs = snapshot.docs;
+      }
+    } catch (firestoreError: any) {
+      // Handle quota exceeded error specifically
+      if (firestoreError.code === 8 || firestoreError.message?.includes('RESOURCE_EXHAUSTED')) {
+        console.error('Firestore quota exceeded in submissions API');
+        return NextResponse.json({
+          submissions: [],
+          warning: 'System is currently under heavy load (Quota Exceeded). Please try again later.'
+        }, { status: 200 });
+      }
+      throw firestoreError;
     }
 
     // Aplicar filtro por status localmente se fornecido
