@@ -12,9 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { getFullSchoolName } from "@/lib/utils";
+
 
 type InventoryItem = {
     id: string;
@@ -535,7 +534,7 @@ const SubmissionDetailDialog = ({ submission, isOpen, onClose }: { submission: a
                         </Badge>
                         <span className="text-sm text-slate-500 flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
-                            {new Date(typeof submission.date === 'number' ? submission.date : submission.date?.toMillis?.() || 0).toLocaleDateString()}
+                            {new Date(submission.date).toLocaleDateString()}
                         </span>
                     </div>
                     <DialogTitle className="text-xl font-bold text-slate-800">Detalhes do Registro</DialogTitle>
@@ -662,7 +661,7 @@ export default function SchoolDashboardContent({ school, isOpen, onClose, hideHe
             setIsLoading(true);
             setPage(1);
 
-            // Fetch school settings (Keep as fetch usually, or could switch to snapshot too)
+            // Fetch school settings
             fetch(`/api/schools/settings?school=${encodeURIComponent(school)}`)
                 .then(res => res.json())
                 .then(json => {
@@ -673,94 +672,21 @@ export default function SchoolDashboardContent({ school, isOpen, onClose, hideHe
                 })
                 .catch(err => console.error(err));
 
-            // Real-time listener for Submissions
-            // CHANGED: Fetch ALL submissions and filter client-side to catch all school name variations
-            console.log(`🔍 [DILMA DEBUG] Setting up Firestore query - fetching ALL submissions for client-side filtering`);
-            console.log(`🎯 [DILMA DEBUG] Target school: "${school}"`);
+            // Fetch Submissions from API
+            fetch(`/api/submissions?school=${encodeURIComponent(school)}`)
+                .then(res => res.json())
+                .then(json => {
+                    const submissions = json.submissions || [];
+                    setData(submissions);
+                    setVisibleData(submissions.slice(0, PAGE_SIZE));
+                })
+                .catch(err => {
+                    console.error("Failed to fetch submissions", err);
+                    setData([]);
+                    setVisibleData([]);
+                })
+                .finally(() => setIsLoading(false));
 
-            // Helper function to normalize school names for comparison
-            const normalizeForComparison = (name: string): string => {
-                return name
-                    .toLowerCase()
-                    .normalize("NFD")
-                    .replace(/[\u0300-\u036f]/g, "") // Remove accents
-                    .replace(/[^a-z0-9]/g, ""); // Remove special chars and spaces
-            };
-
-            const normalizedTargetSchool = normalizeForComparison(school);
-            console.log(`🔄 [DILMA DEBUG] Normalized target: "${normalizedTargetSchool}"`);
-
-            // Also check against full school name
-            const fullSchoolName = getFullSchoolName(school);
-            const normalizedFullName = normalizeForComparison(fullSchoolName);
-            console.log(`📚 [DILMA DEBUG] Full name: "${fullSchoolName}" -> normalized: "${normalizedFullName}"`);
-
-            const q = query(collection(db, "submissions"));
-
-            const unsubscribe = onSnapshot(q, (snapshot: any) => {
-                console.log(`📦 [DILMA DEBUG] Firestore snapshot received. Total docs in database: ${snapshot.docs.length}`);
-
-                // Map all submissions
-                const allSubmissions = snapshot.docs.map((doc: any) => {
-                    const d = doc.data();
-                    return {
-                        id: doc.id,
-                        ...d,
-                        date: d.date?.toMillis?.() ?? null,
-                        createdAt: d.createdAt?.toMillis?.() ?? null
-                    };
-                });
-
-                // Filter by normalized school name (catches all variations)
-                const submissions = allSubmissions.filter((s: any) => {
-                    if (!s.school) return false;
-                    const normalizedSubmissionSchool = normalizeForComparison(s.school);
-                    // Match against either short name or full name
-                    const matches = normalizedSubmissionSchool.includes(normalizedTargetSchool) ||
-                        normalizedTargetSchool.includes(normalizedSubmissionSchool) ||
-                        normalizedSubmissionSchool.includes(normalizedFullName) ||
-                        normalizedFullName.includes(normalizedSubmissionSchool);
-                    return matches;
-                });
-
-                console.log(`🎯 [DILMA DEBUG] Filtered to ${submissions.length} submissions matching "${school}"`);
-
-                // Log sample of schools to check for variations
-                if (submissions.length > 0) {
-                    const uniqueSchools = [...new Set(submissions.map((s: any) => s.school))];
-                    console.log(`🏫 [DILMA DEBUG] Unique school name variations found:`, uniqueSchools);
-                    console.log(`📅 [DILMA DEBUG] Date range of records:`, {
-                        oldest: submissions.map((s: any) => s.date).filter(Boolean).sort()[0],
-                        newest: submissions.map((s: any) => s.date).filter(Boolean).sort().reverse()[0]
-                    });
-                }
-
-                // Client-side sort to handle missing createdAt safely
-                submissions.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
-
-                console.log(`✅ [DILMA DEBUG] Setting ${submissions.length} submissions to state`);
-                setData(submissions);
-                setVisibleData(submissions.slice(0, PAGE_SIZE));
-                setIsLoading(false);
-            }, (error: any) => {
-
-                console.error("❌ [DILMA DEBUG] Snapshot error:", error);
-                console.log("⚠️ [DILMA DEBUG] Falling back to API");
-
-                // Fallback to API if snapshot fails (e.g. permission or index issue)
-                console.warn("Falling back to API fetch due to snapshot error");
-                fetch(`/api/submissions?school=${encodeURIComponent(school)}`)
-                    .then(res => res.json())
-                    .then(json => {
-                        const allSubmissions = json.submissions || [];
-                        console.log(`📦 [DILMA DEBUG] API returned ${allSubmissions.length} submissions`);
-                        setData(allSubmissions);
-                        setVisibleData(allSubmissions.slice(0, PAGE_SIZE));
-                    })
-                    .finally(() => setIsLoading(false));
-            });
-
-            return () => unsubscribe();
         } else {
             setData([]);
             setVisibleData([]);
@@ -1150,7 +1076,7 @@ export default function SchoolDashboardContent({ school, isOpen, onClose, hideHe
                                                     onClick={() => setSelectedSubmission(row)}
                                                 >
                                                     <TableCell className="pl-4 font-medium text-slate-700">
-                                                        {new Date(typeof row.date === 'number' ? row.date : row.date?.toMillis?.() || 0).toLocaleDateString()}
+                                                        {new Date(row.date).toLocaleDateString()}
                                                     </TableCell>
                                                     <TableCell className="text-slate-600">
                                                         <div className="flex flex-col">

@@ -1,4 +1,4 @@
-import { Timestamp } from "firebase/firestore"
+
 
 export interface Filter {
   date: Date[]
@@ -52,15 +52,15 @@ export interface HelpRequest {
   resolutionType?: 'local' | 'central'
   resolutionNotes?: string
   priority?: 'low' | 'medium' | 'high'
-  createdAt: Timestamp | number | Date
-  updatedAt?: Timestamp | number | Date
+  createdAt: number | Date
+  updatedAt?: number | Date
 }
 
 export type Submission = {
   id: string
   respondentName: string
   school: string
-  date: Timestamp | number
+  date: string
   shift: string
   menuType: keyof typeof menuTypeTranslations
   totalStudents: number

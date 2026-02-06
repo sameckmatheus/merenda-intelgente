@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Timestamp, collection, deleteDoc, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
+
 import { LogOut, LoaderCircle, FileX2, Trash2, Users, HelpCircle, ShoppingBasket, FileDown, Building, MessageSquare, PackageCheck, Utensils, CalendarIcon, GraduationCap, TrendingUp, TrendingDown, FileText, Mail, MessageCircle } from "lucide-react";
 
 import { useRouter } from "next/navigation";
@@ -26,7 +26,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { Filter, Submission, menuTypeTranslations, statusTranslations } from "@/lib/types";
-import { db } from "@/lib/firebase";
+
 import { cn, getFullSchoolName } from "@/lib/utils";
 
 const MENU_TYPE_STYLES = {
@@ -178,7 +178,7 @@ export default function AdminDashboard() {
   const handleChangeStatus = async (submissionId: string, newStatus: NonNullable<Submission['status']>) => {
     try {
       setUpdatingStatusId(submissionId);
-      const res = await fetch(`/api/submissions/${submissionId}/status`, {
+      const res = await fetch(`/api/submissions/${submissionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -226,10 +226,7 @@ export default function AdminDashboard() {
     return helpNeededFilter === 'yes' ? sub.helpNeeded : !sub.helpNeeded;
   });
 
-  const formatDate = (date: Timestamp | number) => {
-    if (date instanceof Timestamp) {
-      return format(date.toDate(), "dd/MM/yy");
-    }
+  const formatDate = (date: string | number) => {
     return format(new Date(date), "dd/MM/yy");
   };
 
@@ -373,7 +370,7 @@ export default function AdminDashboard() {
                           )}
                         >
                           <TableCell className="font-medium">{getFullSchoolName(sub.school)}</TableCell>
-                          <TableCell>{format(sub.date instanceof Timestamp ? sub.date.toDate() : new Date(sub.date), "dd/MM/yy")}</TableCell>
+                          <TableCell>{new Date(sub.date).toLocaleDateString("pt-BR")}</TableCell>
                           <TableCell>{sub.shift}</TableCell>
                           <TableCell>{sub.respondentName}</TableCell>
                           <TableCell><div className={`px-2 py-1 text-xs rounded-full text-center border ${getMenuTypeStyle(sub.menuType)}`}>{menuTypeTranslations[sub.menuType]}</div></TableCell>
@@ -443,7 +440,7 @@ export default function AdminDashboard() {
                 <DialogDescription className="text-xs md:text-sm text-slate-500 text-left mt-1">
                   Registro de {selectedSubmission.respondentName} para o turno da {selectedSubmission.shift} em{' '}
                   {format(
-                    selectedSubmission.date instanceof Timestamp ? selectedSubmission.date.toDate() : new Date(typeof selectedSubmission.date === 'number' ? selectedSubmission.date : selectedSubmission.date),
+                    new Date(selectedSubmission.date),
                     "PPP",
                     { locale: ptBR }
                   )}.

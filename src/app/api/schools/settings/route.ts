@@ -3,7 +3,9 @@ import { cookies } from 'next/headers';
 import { getAuth } from 'firebase-admin/auth';
 import { initAdmin, isFirebaseAdminInitialized } from '@/lib/firebase-admin';
 import { AUTH_COOKIE_NAME } from '@/lib/constants';
-import { getFirestore } from 'firebase-admin/firestore';
+import { db } from '@/db';
+import { schools } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 initAdmin();
 
@@ -46,19 +48,23 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'School name required' }, { status: 400 });
         }
 
-        if (!isFirebaseAdminInitialized() && process.env.NODE_ENV === 'development') {
-            return NextResponse.json({ settings: {} }, { status: 200 });
-        }
-
-        const db = getFirestore();
         const docId = normalizeString(schoolName);
-        const doc = await db.collection('schools').doc(docId).get();
+        const result = await db.select().from(schools).where(eq(schools.id, docId)).limit(1);
 
-        if (!doc.exists) {
+        if (result.length === 0) {
             return NextResponse.json({ settings: {} }, { status: 200 });
         }
 
-        return NextResponse.json({ settings: doc.data() }, { status: 200 });
+        const schoolData = result[0];
+        // Map DB fields to what frontend expects in "settings"
+        const settings = {
+            counts: schoolData.totalStudents,
+            contacts: schoolData.contacts,
+            inventory: schoolData.inventory,
+            categories: schoolData.categories,
+        };
+
+        return NextResponse.json({ settings }, { status: 200 });
     } catch (e) {
         console.error('GET /api/schools/settings error', e);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -79,26 +85,38 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Missing required field: schoolName' }, { status: 400 });
         }
 
-        if (!isFirebaseAdminInitialized() && process.env.NODE_ENV === 'development') {
-            console.log('Mock saving school settings:', body);
-            return NextResponse.json({ success: true }, { status: 200 });
-        }
-
-        const db = getFirestore();
         const docId = normalizeString(schoolName);
 
+        // Prepare update data
         const updateData: any = {
-            name: schoolName, // Store original name for display if needed later
             updatedAt: new Date(),
-            updatedBy: authed.uid
         };
 
-        if (counts) updateData.counts = counts;
+        if (counts) updateData.totalStudents = counts;
         if (contacts) updateData.contacts = contacts;
         if (body.inventory) updateData.inventory = body.inventory;
         if (body.categories) updateData.categories = body.categories;
 
-        await db.collection('schools').doc(docId).set(updateData, { merge: true });
+        // Check if exists using count or select
+        const exists = await db.select({ id: schools.id }).from(schools).where(eq(schools.id, docId)).limit(1);
+
+        if (exists.length > 0) {
+            await db.update(schools).set(updateData).where(eq(schools.id, docId));
+        } else {
+            // Create if not exists (upsert-ish)
+            // We need required fields: name, totalStudents, contacts
+            // If they are missing in body, this insert might fail if we don't provide defaults.
+            // Assuming body provides them or we set defaults.
+            await db.insert(schools).values({
+                id: docId,
+                name: schoolName,
+                totalStudents: counts || { morning: 0, afternoon: 0, night: 0 },
+                contacts: contacts || { email: '', whatsapp: '' },
+                inventory: body.inventory || [],
+                categories: body.categories || [],
+                updatedAt: new Date()
+            });
+        }
 
         return NextResponse.json({ success: true }, { status: 200 });
     } catch (e) {

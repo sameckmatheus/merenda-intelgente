@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -11,7 +11,7 @@ import { Calendar as CalendarIcon, Loader2, Send, AlertTriangle, Building2, Uten
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-import { auth, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -175,7 +175,7 @@ export default function FormularioPage() {
             const submissionData = {
                 respondentName: values.respondentName,
                 school: values.school,
-                date: Timestamp.fromDate(values.date),
+                date: values.date.toISOString(),
                 shift: values.shift,
                 menuType: values.menuType,
                 totalStudents: values.totalStudents,
@@ -189,10 +189,19 @@ export default function FormularioPage() {
                 canBuyMissingItems: values.hasSupplyIssues ? (values.canBuyMissingItems === "sim") : undefined,
                 itemsPurchased: values.hasSupplyIssues && values.canBuyMissingItems === "sim" ? values.itemsPurchased : undefined,
                 observations: values.observations,
-                status: "pendente",
             };
 
-            await addDoc(collection(db, "submissions"), submissionData);
+            const response = await fetch('/api/submissions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(submissionData),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to submit');
+            }
 
             setShowSuccess(true);
 

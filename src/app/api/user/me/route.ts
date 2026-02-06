@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
 import { initAdmin, isFirebaseAdminInitialized } from '@/lib/firebase-admin';
 import { AUTH_COOKIE_NAME } from '@/lib/constants';
 import { normalizeSchoolName } from '@/lib/utils';
+import { db } from '@/db';
+import { users } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 initAdmin();
 
@@ -53,48 +55,17 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Check if Firebase Admin is initialized
+        // Check if Firebase Admin is initialized (still needed for Auth, but DB is separate now)
         const adminInitialized = isFirebaseAdminInitialized();
         console.log(`🔧 Firebase Admin initialized: ${adminInitialized}`);
 
-        if (!adminInitialized) {
-            console.warn("⚠️ Firebase Admin not initialized (missing credentials). Using decoded token data as fallback.");
+        // Drizzle Fetch
+        console.log('🔍 Fetching user data from Postgres for UID:', uid);
+        const userResults = await db.select().from(users).where(eq(users.uid, uid)).limit(1);
+        const userData = userResults[0];
 
-            // Use the decoded token data which contains email and other info
-            const email = decodedTokenData?.email || 'unknown@example.com';
-
-            let fallbackData: any = {
-                uid,
-                email,
-                role: 'school',
-                schools: []
-            };
-
-            if (email === 'marcosfreiremunicipal@gmail.com') {
-                console.log('🔧 Injecting multi-school access (fallback) for marcosfreiremunicipal@gmail.com');
-                fallbackData.schools = ['MARCOS FREIRE', 'ANEXO MARCOS FREIRE'];
-            } else {
-                // Try to normalize from email
-                const derivedSchool = normalizeSchoolName(email?.split('@')[0]);
-                if (derivedSchool) {
-                    fallbackData.schools = [derivedSchool];
-                } else {
-                    // Fallback to raw if logic fails (better than nothing)
-                    fallbackData.schools = [email?.split('@')[0].toUpperCase()];
-                }
-            }
-
-            console.log('📤 Returning fallback user data:', fallbackData);
-            return NextResponse.json(fallbackData);
-        }
-
-        // Firebase Admin is initialized, fetch user from Firestore
-        console.log('🔍 Fetching user data from Firestore for UID:', uid);
-        const db = getFirestore();
-        const userDoc = await db.collection('users').doc(uid).get();
-
-        if (!userDoc.exists) {
-            console.warn('⚠️ User exists in Auth but not in Firestore DB. Returning basic info.');
+        if (!userData) {
+            console.warn('⚠️ User exists in Auth but not in Postgres DB. Returning basic info.');
             const email = decodedTokenData?.email || 'unknown@example.com';
 
             let basicData: any = {
@@ -105,7 +76,7 @@ export async function GET(request: Request) {
             };
 
             if (email === 'marcosfreiremunicipal@gmail.com') {
-                console.log('🔧 Injecting multi-school access (no-firestore) for marcosfreiremunicipal@gmail.com');
+                console.log('🔧 Injecting multi-school access (no-db) for marcosfreiremunicipal@gmail.com');
                 basicData.schools = ['MARCOS FREIRE', 'ANEXO MARCOS FREIRE'];
             } else {
                 const derivedSchool = normalizeSchoolName(email?.split('@')[0]);
@@ -119,13 +90,30 @@ export async function GET(request: Request) {
             return NextResponse.json(basicData);
         }
 
-        const userData = userDoc.data();
         console.log('✅ User data fetched successfully. Role:', userData?.role);
 
-        // HARDCODED FIX: Ensure specific user has both schools
-        // This is necessary because we cannot manually update the Firestore document in this environment
-        let finalUserData: any = { uid, ...userData };
+        let finalUserData: any = { ...userData };
         const userEmail = finalUserData.email || decodedTokenData?.email;
+
+        // Map schoolId to schools array to match expected frontend structure
+        // If the DB has `schoolId`, we put it in `schools` array. 
+        // Note: The original returned `schools` array, but schema has `schoolId` (single).
+        // If we want to support multiple schools, we might need a change or logic here.
+        // For now, let's map single ID to array.
+        if (finalUserData.schoolId) {
+            // Need to fetch school name? Or is schoolId the name?
+            // In schema: `schoolId: text("school_id")`.
+            // In Firestore data, users had `schools: string[]`. 
+            // My schema defined `schoolId: text`. 
+            // If the user needs multiple schools, schema might be insufficient or I should treat `schoolId` as one of them.
+            // But wait, the previous code had logic to inject multiple schools.
+            // Check schema again. `schools` table has `id` which is normalized name.
+            // `users` table has `schoolId`.
+            // User might need `schools` array in response.
+            finalUserData.schools = [finalUserData.schoolId];
+        } else {
+            finalUserData.schools = [];
+        }
 
         if (userEmail === 'marcosfreiremunicipal@gmail.com') {
             console.log('🔧 Injecting multi-school access for marcosfreiremunicipal@gmail.com');

@@ -3,18 +3,20 @@ import { cookies } from 'next/headers';
 import { getAuth } from 'firebase-admin/auth';
 import { initAdmin, isFirebaseAdminInitialized } from '@/lib/firebase-admin';
 import { AUTH_COOKIE_NAME } from '@/lib/constants';
-import { getFirestore, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
+import { db } from '@/db';
+import { submissions } from '@/db/schema';
+import { and, desc, eq, gte, lte, ilike } from 'drizzle-orm';
+import { v4 as uuidv4 } from 'uuid';
 
 initAdmin();
 
 async function requireAuth() {
-  // cookies() can be async in some Next.js versions/TS types
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get?.(AUTH_COOKIE_NAME) || cookieStore.get(AUTH_COOKIE_NAME as any);
   if (!sessionCookie) return null;
 
   if (!isFirebaseAdminInitialized() && process.env.NODE_ENV === 'development') {
-    return { uid: 'dev-user' }; // Mock decoded token
+    return { uid: 'dev-user' };
   }
 
   try {
@@ -38,100 +40,103 @@ export async function GET(request: Request) {
     const school = searchParams.get('school');
     const status = searchParams.get('status');
     const limitParam = searchParams.get('limit');
-    const limit = limitParam ? parseInt(limitParam) : 100;
+    let limit = limitParam ? parseInt(limitParam) : 100;
+    if (isNaN(limit)) limit = 100;
 
-    if (!isFirebaseAdminInitialized() && process.env.NODE_ENV === 'development') {
-      console.warn('⚠️ Returning empty submissions (Firebase Admin not initialized)');
-      return NextResponse.json({ submissions: [] }, { status: 200 });
-    }
-
-    const db = getFirestore();
-    const collectionRef = db.collection('submissions') as FirebaseFirestore.CollectionReference<FirebaseFirestore.DocumentData>;
-    let q: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = collectionRef;
+    const conditions = [];
 
     if (start && end) {
-      q = q
-        .where('date', '>=', AdminTimestamp.fromMillis(Number(start)))
-        .where('date', '<=', AdminTimestamp.fromMillis(Number(end)));
+      const startDate = new Date(parseInt(start));
+      const endDate = new Date(parseInt(end));
+      conditions.push(gte(submissions.date, startDate));
+      conditions.push(lte(submissions.date, endDate));
     }
 
-    // Apply limit to base query if possible (note: complex filters might require logic adjustment below)
-    // However, since we filter locally for school sometimes, we should be careful.
-    // Ideally we limit the initial fetch.
-    if (!school || school === 'all') {
-      q = q.limit(limit);
-    }
-
-    // If both date range and school are provided, Firestore may require a composite index
-    // for combining range queries with equality on another field. To avoid forcing an
-    // index, run the date-range query and filter by school locally. If only school is
-    // provided, query by school directly.
-    let docs: FirebaseFirestore.QueryDocumentSnapshot<FirebaseFirestore.DocumentData>[] = [];
-
-    // Helper for normalizing strings (remove accents, lowercase)
-    function normalizeString(str: string): string {
-      return str
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase()
-        .trim();
-    }
-
-    try {
-      // Se temos filtro por escola e data, precisamos filtrar escola localmente
-      if (school && school !== 'all' && start && end) {
-        // Note: limiting here might miss results if we filter locally. 
-        // For now, let's keep the limit on the query to protect usage, 
-        // even if it means we might get fewer than 'limit' results after filtering.
-        // Ideally we would use a composite index and .where('school', '==', school)
-        const snapshot = await q.limit(limit).get();
-        const targetSchool = normalizeString(school);
-        docs = snapshot.docs.filter((d) => normalizeString(d.data()?.school || '') === targetSchool);
-      }
-      // Se temos apenas escola, podemos filtrar direto no Firestore
-      else if (school && school !== 'all') {
-        const snapshot = await collectionRef.where('school', '==', school).limit(limit).get();
-        docs = snapshot.docs;
-      }
-      // Sem filtros específicos, usar a query base
-      else {
-        const snapshot = await q.get();
-        docs = snapshot.docs;
-      }
-    } catch (firestoreError: any) {
-      // Handle quota exceeded error specifically
-      if (firestoreError.code === 8 || firestoreError.message?.includes('RESOURCE_EXHAUSTED')) {
-        console.error('Firestore quota exceeded in submissions API');
-        return NextResponse.json({
-          submissions: [],
-          warning: 'System is currently under heavy load (Quota Exceeded). Please try again later.'
-        }, { status: 200 });
-      }
-      throw firestoreError;
-    }
-
-    // Aplicar filtro por status localmente se fornecido
     if (status && status !== 'all') {
-      docs = docs.filter((d) => (d.data()?.status || 'pendente') === status);
+      conditions.push(eq(submissions.status, status as any));
     }
 
-    const submissions = docs
-      .map((doc) => {
-        const d = doc.data();
-        return {
-          id: doc.id,
-          ...d,
-          date: d.date?.toMillis?.() ?? null,
-          createdAt: d.createdAt?.toMillis?.() ?? null,
-        };
-      })
-      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    if (school && school !== 'all') {
+      conditions.push(ilike(submissions.school, `%${school}%`));
+    }
 
-    return NextResponse.json({ submissions }, { status: 200 });
+    const data = await db.select()
+      .from(submissions)
+      .where(and(...conditions))
+      .orderBy(desc(submissions.createdAt))
+      .limit(limit);
+
+    const mappedSubmissions = data.map(sub => ({
+      ...sub,
+      date: sub.date.getTime(),
+      createdAt: sub.createdAt ? sub.createdAt.getTime() : null,
+    }));
+
+    return NextResponse.json({ submissions: mappedSubmissions }, { status: 200 });
+
   } catch (e) {
     console.error('GET /api/submissions error', e);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export async function POST(request: Request) {
+  const authed = await requireAuth();
+  if (!authed) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    // Body should match the structure sent by the frontend, but we need to ensure correct Date objects
+    // Frontend sends 'date' as ISO string or timestamp? 
+    // In page.tsx: `Timestamp.fromDate(values.date)` -> this object structure might be complex (seconds, nanoseconds).
+    // EXCEPT we are changing the frontend to JSON.stringify().
+    // So we should expect ISO string or timestamp number from the frontend's fetch call.
+    // Let's assume user will update frontend to send ISO string or timestamp.
+
+    const id = uuidv4();
+    const now = new Date();
+
+    // Parse date: handle ISO string or timestamp or Firebase Timestamp like object
+    let submissionDate = new Date();
+    if (body.date) {
+      if (typeof body.date === 'string' || typeof body.date === 'number') {
+        submissionDate = new Date(body.date);
+      } else if (body.date.seconds) { // Firebase Timestamp object
+        submissionDate = new Date(body.date.seconds * 1000);
+      }
+    }
+
+    await db.insert(submissions).values({
+      id,
+      respondentName: body.respondentName,
+      school: body.school,
+      date: submissionDate,
+      shift: body.shift,
+      menuType: body.menuType,
+      totalStudents: Number(body.totalStudents),
+      presentStudents: Number(body.presentStudents),
+      helpNeeded: !!body.helpNeeded,
+      description: body.description,
+      status: 'pendente',
+      alternativeMenuDescription: body.alternativeMenuDescription,
+      itemsPurchased: !!body.itemsPurchased, // Check if frontend sends boolean or string
+      missingItems: body.missingItems,
+      canBuyMissingItems: body.canBuyMissingItems === true || body.canBuyMissingItems === 'sim' || body.canBuyMissingItems === 'true',
+      suppliesReceived: !!body.suppliesReceived,
+      suppliesDescription: body.suppliesDescription,
+      observations: body.observations,
+      menuAdaptationReason: body.menuAdaptationReason,
+      createdAt: now
+    });
+
+    return NextResponse.json({ success: true, id }, { status: 200 });
+  } catch (e) {
+    console.error('POST /api/submissions error', e);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
 
 

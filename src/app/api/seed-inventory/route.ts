@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server';
-import { initAdmin } from '@/lib/firebase-admin';
-import { getFirestore } from 'firebase-admin/firestore';
-
-initAdmin();
+import { db } from '@/db';
+import { systemSettings } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 export async function GET() {
     try {
-        const db = getFirestore();
-
         const inventoryCategories = ["Todos", "Estocáveis", "Proteínas", "Hortifruti", "Material de Limpeza", "Outros"];
 
         const inventoryItems = [
@@ -71,10 +68,26 @@ export async function GET() {
             { id: '90', name: 'Desinfetante', category: 'Material de Limpeza', unit: 'L', minQuantity: 5 },
         ];
 
-        await db.collection('system_settings').doc('general').set({
+        const newData = {
             inventoryCategories,
             inventoryItems
-        }, { merge: true });
+        };
+
+        const current = await db.select().from(systemSettings).where(eq(systemSettings.id, 'general')).limit(1);
+
+        if (current.length > 0) {
+            const existingData = current[0].data as any;
+            await db.update(systemSettings).set({
+                data: { ...existingData, ...newData },
+                updatedAt: new Date()
+            }).where(eq(systemSettings.id, 'general'));
+        } else {
+            await db.insert(systemSettings).values({
+                id: 'general',
+                data: newData,
+                updatedAt: new Date()
+            });
+        }
 
         return NextResponse.json({ success: true, message: 'Inventory seeded successfully' });
     } catch (error: any) {

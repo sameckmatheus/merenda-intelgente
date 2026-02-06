@@ -3,7 +3,7 @@
 import { Building, MessageSquare, Users, Utensils } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Timestamp } from "firebase/firestore";
+
 import {
   Dialog,
   DialogContent,
@@ -44,7 +44,7 @@ export function SubmissionDetails({ submission, onClose }: Props) {
             <Building /> {submission.school}
           </DialogTitle>
           <DialogDescription>
-            Registro de {submission.respondentName} para o turno da {submission.shift} em {format(submission.date instanceof Timestamp ? submission.date.toDate() : new Date(submission.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            Registro de {submission.respondentName} para o turno da {submission.shift} em {format(new Date(submission.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </DialogDescription>
         </DialogHeader>
 

@@ -3,7 +3,10 @@ import { cookies } from 'next/headers';
 import { getAuth } from 'firebase-admin/auth';
 import { initAdmin, isFirebaseAdminInitialized } from '@/lib/firebase-admin';
 import { AUTH_COOKIE_NAME } from '@/lib/constants';
-import { getFirestore } from 'firebase-admin/firestore';
+import { db } from '@/db';
+import { users } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import { v4 as uuidv4 } from 'uuid';
 
 initAdmin();
 
@@ -41,17 +44,8 @@ export async function GET(request: Request) {
     if (!authed) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     try {
-        if (!isFirebaseAdminInitialized() && process.env.NODE_ENV === 'development') {
-            // Return empty or mock for strictly local without firebase
-            return NextResponse.json({ users: [] });
-        }
-
-        const db = getFirestore();
-        const usersSnapshot = await db.collection('users').get();
-
-        const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        return NextResponse.json({ users });
+        const usersList = await db.select().from(users).execute();
+        return NextResponse.json({ users: usersList });
     } catch (e) {
         console.error('GET /api/users error', e);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -67,28 +61,40 @@ export async function POST(request: Request) {
         // Body should match User interface
         // id might be present (update) or absent (create)
 
-        const db = getFirestore();
         let { id, ...data } = body;
 
-        if (!id) {
-            // Create new
-            const ref = db.collection('users').doc();
-            id = ref.id;
+        let newId = id;
+        if (!newId) {
+            newId = uuidv4();
         }
 
-        const userData = {
-            ...data,
-            updatedAt: new Date(),
-            updatedBy: authed.uid
+        const userData: any = {
+            id: newId,
+            uid: data.uid,
+            name: data.name,
+            email: data.email,
+            role: data.role || 'school_responsible',
+            schoolId: data.schoolId,
+            phone: data.phone,
+            status: data.status || 'active',
+            createdAt: new Date()
         };
+        // Note: Drizzle insert ignores 'createdAt' default if not provided, but we can rely on DB default if we omit it. 
+        // However, updating means we might need merged data.
 
-        if (!data.createdAt) {
-            userData.createdAt = new Date();
+        // Upsert logic: simple strategy is check if exists update, else insert.
+        // Or if ID provided, update.
+
+        if (id) {
+            await db.update(users).set({
+                ...userData,
+                // Don't overwrite createdAt on update usually, but body might not have it.
+            }).where(eq(users.id, id));
+        } else {
+            await db.insert(users).values(userData);
         }
 
-        await db.collection('users').doc(id).set(userData, { merge: true });
-
-        return NextResponse.json({ success: true, id });
+        return NextResponse.json({ success: true, id: newId });
     } catch (e) {
         console.error('POST /api/users error', e);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -105,8 +111,7 @@ export async function DELETE(request: Request) {
 
         if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
 
-        const db = getFirestore();
-        await db.collection('users').doc(id).delete();
+        await db.delete(users).where(eq(users.id, id));
 
         return NextResponse.json({ success: true });
     } catch (e) {

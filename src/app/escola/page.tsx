@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 // import { getAuth, onAuthStateChanged } from 'firebase/auth'; // Use exported auth instead
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase'; // Import auth from here
+
+import { auth } from '@/lib/firebase'; // Import auth from here
 import { normalizeSchoolName } from '@/lib/utils';
 import SchoolDashboardContent from '@/components/school-dashboard-content';
 import { GraduationCap, Loader2, RefreshCcw } from 'lucide-react';

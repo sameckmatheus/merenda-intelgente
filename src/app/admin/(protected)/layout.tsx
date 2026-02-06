@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
+
+import { auth } from "@/lib/firebase";
 import { isAdminEmail } from "@/lib/admin-whitelist";
 import { Loader2 } from "lucide-react";
 

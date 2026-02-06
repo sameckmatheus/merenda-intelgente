@@ -3,8 +3,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+
 import type { Submission } from '@/lib/types';
 import { Logo } from '@/components/logo';
 import { format } from 'date-fns';
@@ -38,13 +37,13 @@ export default function SubmissionReceipt() {
 
     const fetchSubmission = async () => {
       try {
-        const docRef = doc(db, 'submissions', id);
-        const docSnap = await getDoc(docRef);
+        const res = await fetch(`/api/submissions/${id}`);
 
-        if (docSnap.exists()) {
-          setSubmission({ id: docSnap.id, ...docSnap.data() } as Submission);
+        if (res.ok) {
+          const data = await res.json();
+          setSubmission(data);
         } else {
-          setError('Nenhum registro encontrado com este ID.');
+          setError('Nenhum registro encontrado.');
         }
       } catch (e) {
         console.error('Erro ao buscar registro:', e);
@@ -113,9 +112,9 @@ export default function SubmissionReceipt() {
               <DetailItem label="Escola" value={submission.school} />
               <DetailItem label="Responsável" value={submission.respondentName} />
               <DetailItem label="Data do Registro" value={
-                (submission.date && typeof (submission.date as any)?.toDate === 'function')
-                  ? format((submission.date as any).toDate(), 'PPP', { locale: ptBR })
-                  : format(new Date(submission.date as any), 'PPP', { locale: ptBR })
+                (submission.date)
+                  ? format(new Date(submission.date), 'PPP', { locale: ptBR })
+                  : '-'
               } />
               <DetailItem label="Turno" value={submission.shift} />
             </div>
