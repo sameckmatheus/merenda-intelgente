@@ -8,7 +8,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from 'date-fns/locale';
 import { Building, Calendar as CalendarIcon, MessageSquare, HelpCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getFullSchoolName } from "@/lib/utils";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { DateRange } from "react-day-picker";
@@ -134,7 +134,7 @@ export function Filters({
             <Combobox
               options={[
                 { value: "all", label: "Todas as Escolas" },
-                ...safeSchools.map(s => ({ value: s, label: s }))
+                ...safeSchools.map(s => ({ value: s, label: getFullSchoolName(s) }))
               ]}
               value={selectedSchool}
               onChange={safeSetSelectedSchool}

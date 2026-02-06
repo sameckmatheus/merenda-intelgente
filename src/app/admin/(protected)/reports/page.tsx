@@ -6,12 +6,16 @@ import { AdminLayout } from "@/components/admin/admin-layout";
 import { Filters } from "@/components/admin/filters";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, FileText, ShoppingCart, HelpCircle, TrendingUp, TrendingDown, Activity, Calendar as CalendarIcon, AlertTriangle, BarChart, ShoppingBasket, Printer, RefreshCw, FileDown } from 'lucide-react';
+import { Download, FileText, ShoppingCart, HelpCircle, TrendingUp, TrendingDown, Activity, Calendar as CalendarIcon, AlertTriangle, BarChart, ShoppingBasket, Printer, RefreshCw, FileDown, Utensils, Users, PackageCheck, MessageSquare, Mail, History, FileDown as FileDownIcon } from 'lucide-react';
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, AreaChart, Area, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
-// import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { cn, getFullSchoolName } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 // import jsPDF from "jspdf";
 // import "jspdf-autotable"; // Dynamic import in downloadPDF to fix SSR build error
 
@@ -74,7 +78,7 @@ const KpiCards: FC<{ submissions: any[] }> = ({ submissions }) => {
   );
 };
 
-const StatusDistributionChart: FC<{ data: { name: string, value: number }[], isLoading: boolean }> = ({ data, isLoading }) => {
+const StatusDistributionChart: FC<{ data: any[], isLoading: boolean }> = ({ data, isLoading }) => {
   return (
     <Card className="border-0 shadow-lg shadow-blue-900/5 bg-white/80 backdrop-blur-sm min-w-0">
       <CardHeader>
@@ -85,44 +89,36 @@ const StatusDistributionChart: FC<{ data: { name: string, value: number }[], isL
         {isLoading ? (
           <div className="h-64 flex items-center justify-center text-slate-400">Carregando...</div>
         ) : data.length > 0 ? (
-          <div className="h-64">
-            <ChartContainer
-              config={{
-                pendente: { label: 'Pendente', color: STATUS_COLORS.pendente },
-                atendido: { label: 'Atendido', color: STATUS_COLORS.atendido },
-                atendido_parcialmente: { label: 'Parcial', color: STATUS_COLORS.atendido_parcialmente },
-                recusado: { label: 'Recusado', color: STATUS_COLORS.recusado },
-              }}
-              className="h-full w-full"
-            >
-              <PieChart>
-                <Pie
-                  data={data}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                >
-                  {data.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as Status] || '#cbd5e1'} strokeWidth={0} />
-                  ))}
-                </Pie>
-                <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
-                <ChartLegend
-                  content={({ payload }: { payload?: any[] }) => (
-                    <div className="flex justify-center gap-4 mt-4 flex-wrap">
-                      {payload?.map((entry: any, index: number) => (
-                        <div key={`legend-${index}`} className="flex items-center gap-2 text-sm text-slate-600">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-                          <span className="capitalize">{entry.payload?.label || entry.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <RechartsBarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                <XAxis
+                  dataKey="name"
+                  stroke="#64748b"
+                  tick={{ fontSize: 12, fontWeight: 500 }}
+                  axisLine={false}
+                  tickLine={false}
                 />
-              </PieChart>
-            </ChartContainer>
+                <YAxis
+                  stroke="#64748b"
+                  tick={{ fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                  cursor={{ fill: '#f1f5f9', opacity: 0.3 }}
+                  formatter={(value: number) => [value, 'Submissões']}
+                />
+                <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={60}>
+                  {data.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name as Status] || '#cbd5e1'} />
+                  ))}
+                </Bar>
+              </RechartsBarChart>
+            </ResponsiveContainer>
           </div>
         ) : (
           <div className="h-64 flex items-center justify-center text-muted-foreground">Sem dados</div>
@@ -133,7 +129,25 @@ const StatusDistributionChart: FC<{ data: { name: string, value: number }[], isL
 };
 
 
-const RecentActivity: FC<{ submissions: any[] }> = ({ submissions }) => {
+const RecentActivity: FC<{ submissions: any[], onItemClick?: (submission: any) => void }> = ({ submissions, onItemClick }) => {
+  const getMenuTypeLabel = (menuType: string) => {
+    const labels: Record<string, string> = {
+      planned: 'Previsto',
+      alternative: 'Alternativo',
+      improvised: 'Improvis ado'
+    };
+    return labels[menuType] || menuType;
+  };
+
+  const getMenuTypeBadgeClass = (menuType: string) => {
+    const classes: Record<string, string> = {
+      planned: 'bg-emerald-500 text-white',
+      alternative: 'bg-amber-500 text-white',
+      improvised: 'bg-red-500 text-white'
+    };
+    return classes[menuType] || 'bg-slate-500 text-white';
+  };
+
   return (
     <Card className="border-0 shadow-lg shadow-blue-900/5 bg-white/80 backdrop-blur-sm h-full min-w-0">
       <CardHeader>
@@ -142,24 +156,53 @@ const RecentActivity: FC<{ submissions: any[] }> = ({ submissions }) => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
-          {submissions.slice(0, 4).map((r: any, i) => (
-            <div key={r.id} className="flex items-start gap-4">
-              <div className={cn(
-                "w-2 h-2 mt-2 rounded-full ring-4 ring-opacity-20 flex-shrink-0",
-                r.status === 'atendido' ? "bg-emerald-500 ring-emerald-500" :
-                  r.status === 'atendido_parcialmente' ? "bg-blue-500 ring-blue-500" :
-                    r.status === 'recusado' ? "bg-red-500 ring-red-500" : "bg-amber-400 ring-amber-400"
-              )} />
-              <div className="flex-1 space-y-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900 leading-none truncate">{r.school}</p>
-                <p className="text-xs text-slate-500 truncate">
-                  {r.respondentName} • {new Date(typeof r.date === 'number' ? r.date : r.date?.toMillis?.() || r.date || 0).toLocaleDateString()}
-                </p>
+        <div className="space-y-4">
+          {submissions.slice(0, 5).map((r: any, i) => (
+            <div
+              key={r.id}
+              className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group cursor-pointer hover:shadow-md"
+              onClick={() => onItemClick?.(r)}
+            >
+              <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-500 transition-colors shrink-0">
+                <Utensils className="w-4 h-4 text-blue-600 group-hover:text-white transition-colors" />
+              </div>
+              <div className="flex-1 min-w-0 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-slate-900 leading-tight">{r.respondentName}</p>
+                    <p className="text-xs text-slate-600 truncate mt-0.5">
+                      {getFullSchoolName(r.school)}
+                    </p>
+                  </div>
+                  <div className={cn(
+                    "w-2 h-2 rounded-full ring-4 ring-opacity-20 shrink-0 mt-1",
+                    r.status === 'atendido' ? "bg-emerald-500 ring-emerald-500" :
+                      r.status === 'atendido_parcialmente' ? "bg-blue-500 ring-blue-500" :
+                        r.status === 'recusado' ? "bg-red-500 ring-red-500" : "bg-amber-400 ring-amber-400"
+                  )} />
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="flex items-center gap-1 text-slate-500">
+                    <Users className="w-3 h-3" />
+                    <span className="font-medium">{r.presentStudents || 0}</span> alunos
+                  </span>
+                  <span className="capitalize text-slate-500 px-2 py-0.5 bg-slate-100 rounded">
+                    {r.shift}
+                  </span>
+                  <span className={cn(
+                    "px-2 py-0.5 rounded text-xs font-medium",
+                    getMenuTypeBadgeClass(r.menuType)
+                  )}>
+                    {getMenuTypeLabel(r.menuType)}
+                  </span>
+                  <span className="text-slate-400 ml-auto shrink-0">
+                    {new Date(typeof r.date === 'number' ? r.date : r.date?.toMillis?.() || r.date || 0).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                  </span>
+                </div>
               </div>
             </div>
           ))}
-          {submissions.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma atividade recente</p>}
+          {submissions.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Nenhuma atividade recente</p>}
         </div>
       </CardContent>
     </Card>
@@ -227,13 +270,7 @@ const TimeActivityChart: FC<{ data: any[], isLoading: boolean }> = ({ data, isLo
         ) : data.length > 0 ? (
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis
                   dataKey="label"
@@ -250,19 +287,19 @@ const TimeActivityChart: FC<{ data: any[], isLoading: boolean }> = ({ data, isLo
                   allowDecimals={false}
                 />
                 <Tooltip
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', padding: '12px' }}
                   cursor={{ stroke: '#94a3b8', strokeWidth: 1 }}
                 />
-                <Area
+                <Line
                   type="monotone"
                   dataKey="count"
                   stroke="#3b82f6"
                   strokeWidth={3}
-                  fillOpacity={1}
-                  fill="url(#colorTotal)"
+                  dot={{ r: 4, fill: '#3b82f6', strokeWidth: 0 }}
+                  activeDot={{ r: 6, fill: '#2563eb' }}
                   name="Registros"
                 />
-              </AreaChart>
+              </LineChart>
             </ResponsiveContainer>
           </div>
         ) : (
@@ -283,10 +320,10 @@ const MenuTypeChart: FC<{ submissions: any[], isLoading: boolean }> = ({ submiss
     });
 
     return [
-      { name: 'Previsto', value: counts.planned, color: '#10b981' }, // Emerald
-      { name: 'Alternativo', value: counts.alternative, color: '#f59e0b' }, // Amber
-      { name: 'Improvisado', value: counts.improvised, color: '#ef4444' }, // Red
-    ].filter(d => d.value > 0);
+      { name: 'Previsto', value: counts.planned, fill: '#10b981' }, // Emerald
+      { name: 'Alternativo', value: counts.alternative, fill: '#f59e0b' }, // Amber
+      { name: 'Improvisado', value: counts.improvised, fill: '#ef4444' }, // Red
+    ];
   }, [submissions]);
 
   return (
@@ -298,45 +335,25 @@ const MenuTypeChart: FC<{ submissions: any[], isLoading: boolean }> = ({ submiss
       <CardContent>
         {isLoading ? (
           <div className="h-64 flex items-center justify-center text-slate-400">Carregando...</div>
-        ) : data.length > 0 ? (
-          <div className="h-64">
-            <ChartContainer
-              config={{
-                planned: { label: 'Previsto', color: '#10b981' },
-                alternative: { label: 'Alternativo', color: '#f59e0b' },
-                improvised: { label: 'Improvisado', color: '#ef4444' },
-              }}
-              className="h-full w-full"
-            >
-              <PieChart>
-                <Pie
-                  data={data}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                >
-                  {data.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
-                  ))}
-                </Pie>
-                <ChartTooltip content={<ChartTooltipContent indicator="dot" />} />
-                <ChartLegend
-                  content={({ payload }) => (
-                    <div className="flex justify-center gap-4 mt-4 flex-wrap">
-                      {payload?.map((entry: any, index: number) => (
-                        <div key={`legend-${index}`} className="flex items-center gap-2 text-sm text-slate-600">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-                          <span className="capitalize">{entry.payload?.label || entry.value}</span>
-                          <span className="text-xs text-slate-400">({entry.payload?.payload?.value})</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+        ) : data.some(d => d.value > 0) ? (
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <RechartsBarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                <XAxis type="number" stroke="#64748b" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" stroke="#64748b" tick={{ fontSize: 13, fontWeight: 600 }} axisLine={false} tickLine={false} width={100} />
+                <Tooltip
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                  cursor={{ fill: '#f1f5f9', opacity: 0.3 }}
+                  formatter={(value: number) => [value, 'Registros']}
                 />
-              </PieChart>
-            </ChartContainer>
+                <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={40}>
+                  {data.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </RechartsBarChart>
+            </ResponsiveContainer>
           </div>
         ) : (
           <div className="h-64 flex items-center justify-center text-muted-foreground">Sem dados</div>
@@ -346,65 +363,138 @@ const MenuTypeChart: FC<{ submissions: any[], isLoading: boolean }> = ({ submiss
   );
 };
 
-const DetailedActivityLog: FC<{ submissions: any[] }> = ({ submissions }) => (
-  <Card className="border-0 shadow-lg shadow-blue-900/5 bg-white/80 backdrop-blur-sm overflow-hidden col-span-full">
-    <CardHeader>
-      <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-        <FileText className="w-5 h-5 text-slate-500" /> Log de Atividades Detalhado
-      </CardTitle>
-      <CardDescription>Registro completo de todas as ações no sistema</CardDescription>
-    </CardHeader>
-    <CardContent className="p-0">
-      <div className="max-h-[500px] overflow-auto">
-        <Table>
-          <TableHeader className="bg-slate-50/50 sticky top-0 z-10">
-            <TableRow className="hover:bg-transparent border-slate-100">
-              <TableHead className="font-semibold text-slate-600 w-[180px]">Data & Hora</TableHead>
-              <TableHead className="font-semibold text-slate-600">Usuário</TableHead>
-              <TableHead className="font-semibold text-slate-600">Escola</TableHead>
-              <TableHead className="font-semibold text-slate-600">Ação</TableHead>
-              <TableHead className="font-semibold text-slate-600">Detalhes</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {submissions.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">Nenhum registro encontrado</TableCell>
-              </TableRow>
-            ) : (
-              submissions.map((s: any) => {
-                const dateObj = new Date(typeof s.date === 'number' ? s.date : s.date?.toMillis?.() || s.date || 0);
-                return (
-                  <TableRow key={s.id} className="hover:bg-slate-50/50 border-slate-100 transition-colors">
-                    <TableCell className="font-mono text-xs text-slate-500">
-                      {dateObj.toLocaleString('pt-BR')}
-                    </TableCell>
-                    <TableCell className="font-medium text-slate-700 text-sm">{s.respondentName || 'Sistema'}</TableCell>
-                    <TableCell className="text-slate-600 text-sm">{s.school}</TableCell>
-                    <TableCell>
-                      <span className={cn(
-                        "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                        s.status === 'atendido' ? "bg-emerald-100 text-emerald-700" :
-                          s.menuType === 'improvised' ? "bg-red-100 text-red-700" :
-                            s.helpNeeded ? "bg-amber-100 text-amber-700" :
-                              "bg-blue-100 text-blue-700"
-                      )}>
-                        {s.helpNeeded ? 'PEDIDO AJUDA' : s.menuType === 'planned' ? 'REGISTRO DIÁRIO' : 'OCORRÊNCIA'}
+// Badge standardization helper
+const getActionBadge = (submission: any) => {
+  // Critical - Red (Improvisado, Recusado, Emergência)
+  if (submission.menuType === 'improvised') {
+    return { label: 'IMPROVISADO', className: 'bg-red-500 text-white font-bold' };
+  }
+  if (submission.status === 'recusado') {
+    return { label: 'RECUSADO', className: 'bg-red-500 text-white font-bold' };
+  }
+  if (submission.itemsPurchased) {
+    return { label: 'COMPRA EMERGENCIAL', className: 'bg-red-500 text-white font-bold' };
+  }
+
+  // Warning - Amber (Alternativo, Pendente, Ajuda)
+  if (submission.menuType === 'alternative') {
+    return { label: 'ALTERNATIVO', className: 'bg-amber-500 text-white font-bold' };
+  }
+  if (submission.status === 'pendente' || !submission.status) {
+    return { label: 'PENDENTE', className: 'bg-amber-500 text-white font-bold' };
+  }
+  if (submission.helpNeeded) {
+    return { label: 'AJUDA NECESSÁRIA', className: 'bg-amber-500 text-white font-bold' };
+  }
+  if (submission.status === 'atendido_parcialmente') {
+    return { label: 'PARCIAL', className: 'bg-amber-500 text-white font-bold' };
+  }
+
+  // Success - Emerald (Atendido, Previsto, Registro)
+  if (submission.status === 'atendido') {
+    return { label: 'ATENDIDO', className: 'bg-emerald-500 text-white font-bold' };
+  }
+
+  // Default - Info Blue (Ocorrência)
+  return { label: 'REGISTRO DIÁRIO', className: 'bg-emerald-500 text-white font-bold' };
+};
+
+const DetailedActivityLog: FC<{ submissions: any[], onItemClick?: (submission: any) => void }> = ({ submissions, onItemClick }) => {
+  const getMenuTypeLabel = (menuType: string) => {
+    const labels: Record<string, string> = {
+      planned: 'Previsto',
+      alternative: 'Alternativo',
+      improvised: 'Improvisado'
+    };
+    return labels[menuType] || menuType;
+  };
+
+  const getMenuTypeBadgeClass = (menuType: string) => {
+    const classes: Record<string, string> = {
+      planned: 'bg-emerald-500 text-white',
+      alternative: 'bg-amber-500 text-white',
+      improvised: 'bg-red-500 text-white'
+    };
+    return classes[menuType] || 'bg-slate-500 text-white';
+  };
+
+  return (
+    <Card className="border-0 shadow-lg shadow-blue-900/5 bg-white/80 backdrop-blur-sm overflow-hidden">
+      <CardHeader className="bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
+        <CardTitle className="text-xl font-bold text-slate-800 flex items-center gap-3">
+          <FileText className="w-5 h-5 text-slate-500" /> Log de Atividades Detalhado
+        </CardTitle>
+        <CardDescription>Registro completo de todas as ações no sistema</CardDescription>
+      </CardHeader>
+      <CardContent className="p-4">
+        <div className="max-h-[600px] overflow-y-auto space-y-3">
+          {submissions.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-12">Nenhum registro encontrado</p>
+          ) : (
+            submissions.map((s: any) => {
+              const dateObj = new Date(typeof s.date === 'number' ? s.date : s.date?.toMillis?.() || s.date || 0);
+              const badge = getActionBadge(s);
+
+              return (
+                <div
+                  key={s.id}
+                  className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group cursor-pointer hover:shadow-md border border-slate-100"
+                  onClick={() => onItemClick?.(s)}
+                >
+                  <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-500 transition-colors shrink-0">
+                    <Utensils className="w-4 h-4 text-blue-600 group-hover:text-white transition-colors" />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm text-slate-900 leading-tight">{s.respondentName || 'Sistema'}</p>
+                        <p className="text-xs text-slate-600 truncate mt-0.5">
+                          {getFullSchoolName(s.school)}
+                        </p>
+                      </div>
+                      <div className={cn(
+                        "w-2 h-2 rounded-full ring-4 ring-opacity-20 shrink-0 mt-1",
+                        s.status === 'atendido' ? "bg-emerald-500 ring-emerald-500" :
+                          s.status === 'atendido_parcialmente' ? "bg-blue-500 ring-blue-500" :
+                            s.status === 'recusado' ? "bg-red-500 ring-red-500" : "bg-amber-400 ring-amber-400"
+                      )} />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="flex items-center gap-1 text-slate-500">
+                        <Users className="w-3 h-3" />
+                        <span className="font-medium">{s.presentStudents || 0}</span> alunos
                       </span>
-                    </TableCell>
-                    <TableCell className="text-slate-500 text-sm max-w-[300px] truncate" title={s.observations || s.missingItems || s.alternativeMenuDescription || ''}>
-                      {s.observations || s.missingItems || s.alternativeMenuDescription || '-'}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </CardContent>
-  </Card>
-);
+                      <span className="capitalize text-slate-500 px-2 py-0.5 bg-slate-100 rounded">
+                        {s.shift}
+                      </span>
+                      <span className={cn(
+                        "px-2 py-0.5 rounded text-xs font-medium",
+                        getMenuTypeBadgeClass(s.menuType)
+                      )}>
+                        {getMenuTypeLabel(s.menuType)}
+                      </span>
+                      <span className={cn("px-2 py-0.5 rounded text-[10px] uppercase tracking-wider", badge.className)}>
+                        {badge.label}
+                      </span>
+                      <span className="text-slate-400 ml-auto shrink-0 font-mono text-[10px]">
+                        {dateObj.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    {(s.missingItems || s.observations) && (
+                      <p className="text-xs text-slate-500 italic truncate">
+                        {s.missingItems || s.observations}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const getDateRange = (date: Date, filterType: 'day' | 'week' | 'month' | 'year' | 'custom', dateRange?: any): { start: number, end: number } => {
   const d = new Date(date);
@@ -448,6 +538,7 @@ export default function AdminReports() {
   const [selectedSchool, setSelectedSchool] = useState<string>(searchParams.get('school') || 'all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [helpNeededFilter, setHelpNeededFilter] = useState<'all' | 'yes' | 'no'>('all');
+  const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
 
   const [summary, setSummary] = useState<{ bySchool: any[], byStatus: any[], missingItems: any[] }>({ bySchool: [], byStatus: [], missingItems: [] });
   const [isLoading, setIsLoading] = useState(true);
@@ -1007,15 +1098,173 @@ export default function AdminReports() {
             <MenuTypeChart submissions={submissionsRaw} isLoading={isLoading} />
           </div>
           <div className="lg:col-span-2">
-            <RecentActivity submissions={submissionsRaw} />
+            <RecentActivity submissions={submissionsRaw} onItemClick={setSelectedSubmission} />
           </div>
         </div>
 
         {/* Detailed Logs */}
-        <DetailedActivityLog submissions={submissionsRaw} />
-
+        <DetailedActivityLog submissions={submissionsRaw} onItemClick={setSelectedSubmission} />
 
       </div>
+
+      {/* Side Sheet Modal for Detailed View */}
+      <Sheet open={!!selectedSubmission} onOpenChange={(open) => !open && setSelectedSubmission(null)}>
+        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto z-50">
+          {selectedSubmission && (
+            <>
+              <SheetHeader className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-3 bg-blue-100 rounded-lg shrink-0">
+                    <Utensils className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <SheetTitle className="text-xl font-bold leading-tight">
+                      {getFullSchoolName(selectedSubmission.school)}
+                    </SheetTitle>
+                    <SheetDescription className="mt-1">
+                      Registro de {selectedSubmission.respondentName} • {' '}
+                      {selectedSubmission.date && format(
+                        new Date(typeof selectedSubmission.date === 'number' ? selectedSubmission.date : selectedSubmission.date?.toMillis?.() || selectedSubmission.date),
+                        "PPP 'às' HH:mm",
+                        { locale: ptBR }
+                      )}
+                    </SheetDescription>
+                  </div>
+                </div>
+
+                <Badge className={cn(
+                  "w-fit",
+                  selectedSubmission.status === 'atendido' ? "bg-emerald-500" :
+                    selectedSubmission.status === 'atendido_parcialmente' ? "bg-blue-500" :
+                      selectedSubmission.status === 'recusado' ? "bg-red-500" : "bg-amber-500"
+                )}>
+                  {selectedSubmission.status === 'atendido' ? 'Atendido' :
+                    selectedSubmission.status === 'atendido_parcialmente' ? 'Parcialmente Atendido' :
+                      selectedSubmission.status === 'recusado' ? 'Recusado' : 'Pendente'}
+                </Badge>
+              </SheetHeader>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 flex-wrap mt-6 mb-4">
+                <Button variant="outline" size="sm" className="border-emerald-200 hover:bg-emerald-50">
+                  <MessageSquare className="w-4 h-4 mr-2 text-emerald-600" />
+                  WhatsApp
+                </Button>
+                <Button variant="outline" size="sm" className="border-blue-200 hover:bg-blue-50">
+                  <Mail className="w-4 h-4 mr-2 text-blue-600" />
+                  Email
+                </Button>
+                <Button variant="outline" size="sm" className="border-slate-200 hover:bg-slate-50">
+                  <History className="w-4 h-4 mr-2 text-slate-600" />
+                  Ver Histórico
+                </Button>
+                <Button variant="outline" size="sm" className="border-slate-200 hover:bg-slate-50">
+                  <FileDownIcon className="w-4 h-4 mr-2 text-slate-600" />
+                  Exportar
+                </Button>
+              </div>
+
+              <Separator className="my-6" />
+
+              <div className="space-y-6">
+                {/* Basic Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Turno</p>
+                    <p className="text-sm font-semibold capitalize">{selectedSubmission.shift}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Alunos Presentes</p>
+                    <p className="text-sm font-semibold">{selectedSubmission.presentStudents || 0} / {selectedSubmission.totalStudents || 0}</p>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Menu Type */}
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Tipo de Cardápio</p>
+                  <Badge className={cn(
+                    selectedSubmission.menuType === 'planned' ? "bg-emerald-500" :
+                      selectedSubmission.menuType === 'alternative' ? "bg-amber-500" : "bg-red-500"
+                  )}>
+                    {selectedSubmission.menuType === 'planned' ? 'Previsto' :
+                      selectedSubmission.menuType === 'alternative' ? 'Alternativo' : 'Improvisado'}
+                  </Badge>
+                  {selectedSubmission.alternativeMenuDescription && (
+                    <p className="text-sm text-slate-600 mt-2">{selectedSubmission.alternativeMenuDescription}</p>
+                  )}
+                </div>
+
+                <Separator />
+
+                {/* Help Section */}
+                {selectedSubmission.helpNeeded && (
+                  <>
+                    <div className="p-4 border-2 border-red-500 bg-gradient-to-br from-red-50 to-orange-50 rounded-xl space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-red-500 rounded-lg">
+                          <HelpCircle className="w-4 h-4 text-white" />
+                        </div>
+                        <h4 className="font-bold text-red-900">Ajuda Necessária</h4>
+                      </div>
+
+                      {selectedSubmission.missingItems && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-red-700">Itens em Falta:</p>
+                          <p className="text-sm text-red-900">{selectedSubmission.missingItems}</p>
+                        </div>
+                      )}
+
+                      {selectedSubmission.canBuyMissingItems && (
+                        <p className="text-xs text-orange-700 font-medium">✓ Pode comprar itens</p>
+                      )}
+
+                      {selectedSubmission.itemsPurchased && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-orange-700">Itens Comprados:</p>
+                          <p className="text-sm text-orange-900">{selectedSubmission.itemsPurchased}</p>
+                        </div>
+                      )}
+                    </div>
+                    <Separator />
+                  </>
+                )}
+
+                {/* Supplies Section */}
+                {selectedSubmission.suppliesReceived && (
+                  <>
+                    <div className="p-4 border-2 border-blue-500 bg-gradient-to-br from-blue-50 to-emerald-50 rounded-xl space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-blue-500 rounded-lg">
+                          <PackageCheck className="w-4 h-4 text-white" />
+                        </div>
+                        <h4 className="font-bold text-blue-900">Suprimentos Recebidos</h4>
+                      </div>
+
+                      {selectedSubmission.suppliesDescription && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-blue-700">Descrição:</p>
+                          <p className="text-sm text-emerald-900">{selectedSubmission.suppliesDescription}</p>
+                        </div>
+                      )}
+                    </div>
+                    <Separator />
+                  </>
+                )}
+
+                {/* Observations */}
+                {selectedSubmission.observations && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Observações</p>
+                    <p className="text-sm text-slate-700 bg-slate-50 p-3 rounded-lg">{selectedSubmission.observations}</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </AdminLayout>
   );
 }

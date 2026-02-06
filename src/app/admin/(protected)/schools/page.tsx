@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
+import { cn, getFullSchoolName } from "@/lib/utils";
 
 // Removed SCHOOLS_LIST import dependency for Main Page usage, but keeps it for fallback elsewhere if needed.
 // Actually we will fetch from API.
@@ -71,7 +71,7 @@ const SchoolCard = ({
           <GraduationCap className="w-8 h-8 text-blue-600" />
         </div>
         <div>
-          <h3 className="font-bold text-lg text-slate-800 line-clamp-2 leading-tight min-h-[3rem] flex items-center justify-center">{school.name}</h3>
+          <h3 className="font-bold text-lg text-slate-800 line-clamp-2 leading-tight min-h-[3rem] flex items-center justify-center">{getFullSchoolName(school.name)}</h3>
           <p className="text-sm text-slate-500 font-medium mt-1">{count} registros</p>
         </div>
         <Button variant="secondary" className="w-full mt-2 bg-slate-50 hover:bg-blue-600 hover:text-white text-slate-700 transition-colors">
@@ -388,7 +388,7 @@ const SchoolInventoryModal = ({ school, isOpen, onClose }: { school: string, isO
               <div className="p-1.5 md:p-2 bg-blue-100 rounded-lg text-blue-600 shrink-0">
                 <Package className="w-4 h-4 md:w-6 md:h-6" />
               </div>
-              <span className="break-words">Controle de Estoque - {school}</span>
+              <span className="break-words">Controle de Estoque - {getFullSchoolName(school)}</span>
             </DialogTitle>
             <DialogDescription className="text-xs md:text-sm text-slate-500 text-left mt-1 line-clamp-1">
               Gerencie os itens disponíveis na despensa da escola.
@@ -808,13 +808,40 @@ const SchoolDetailsModal = ({ school, isOpen, onClose }: { school: string | null
       setIsLoading(true);
       setPage(1);
 
-      // Fetch all submissions
-      const p1 = fetch(`/api/submissions?school=${encodeURIComponent(school)}`)
+      // Helper function to normalize school names for comparison
+      const normalizeForComparison = (name: string): string => {
+        return name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "") // Remove accents
+          .replace(/[^a-z0-9]/g, ""); // Remove special chars and spaces
+      };
+
+      const normalizedTargetSchool = normalizeForComparison(school);
+      const fullSchoolName = getFullSchoolName(school);
+      const normalizedFullName = normalizeForComparison(fullSchoolName);
+
+      // Fetch ALL submissions and filter client-side
+      const p1 = fetch(`/api/submissions`)
         .then(res => res.json())
         .then(json => {
           const allSubmissions = json.submissions || [];
-          setData(allSubmissions);
-          setVisibleData(allSubmissions.slice(0, PAGE_SIZE));
+
+          // Filter by normalized school name (catches all variations)
+          const filteredSubmissions = allSubmissions.filter((s: any) => {
+            if (!s.school) return false;
+            const normalizedSubmissionSchool = normalizeForComparison(s.school);
+            // Match against either short name or full name
+            const matches = normalizedSubmissionSchool.includes(normalizedTargetSchool) ||
+              normalizedTargetSchool.includes(normalizedSubmissionSchool) ||
+              normalizedSubmissionSchool.includes(normalizedFullName) ||
+              normalizedFullName.includes(normalizedSubmissionSchool);
+            return matches;
+          });
+
+          console.log(`🎯 [SCHOOL MODAL] Filtered ${filteredSubmissions.length} submissions for "${school}" from ${allSubmissions.length} total`);
+          setData(filteredSubmissions);
+          setVisibleData(filteredSubmissions.slice(0, PAGE_SIZE));
         })
         .catch(err => console.error(err));
 
@@ -901,7 +928,7 @@ const SchoolDetailsModal = ({ school, isOpen, onClose }: { school: string | null
               <div className="p-1.5 md:p-2 bg-blue-100 rounded-lg text-blue-600 shrink-0">
                 <GraduationCap className="w-4 h-4 md:w-6 md:h-6" />
               </div>
-              {school}
+              {school ? getFullSchoolName(school) : ''}
             </DialogTitle>
             <DialogDescription className="text-xs md:text-sm text-slate-500 text-left mt-1 line-clamp-1">
               Visão geral, estoque e histórico completo.
@@ -1080,7 +1107,7 @@ const SchoolDetailsModal = ({ school, isOpen, onClose }: { school: string | null
                             <TableCell className="text-slate-600">
                               <div className="flex flex-col">
                                 <span className="font-medium text-slate-900 line-clamp-1">{row.respondentName}</span>
-                                <span className="text-xs text-slate-400 truncate">{row.school}</span>
+                                <span className="text-xs text-slate-400 truncate">{getFullSchoolName(row.school)}</span>
                               </div>
                             </TableCell>
                             <TableCell className="text-slate-600 capitalize">{row.shift}</TableCell>
@@ -1178,9 +1205,28 @@ export default function AdminSchools() {
   }, []);
 
   const getCount = (name: string) => {
-    // normalized matching
-    const target = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-    return schoolSummaries.find(s => s.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() === target)?.count || 0;
+    // Enhanced normalized matching to capture all variations
+    const normalizeForComparison = (str: string): string => {
+      return str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Remove accents
+        .replace(/[^a-z0-9]/g, ""); // Remove special chars and spaces
+    };
+
+    const normalizedTarget = normalizeForComparison(name);
+    const fullName = getFullSchoolName(name);
+    const normalizedFullName = normalizeForComparison(fullName);
+
+    // Sum all records that match either the short name or full name
+    return schoolSummaries.reduce((total, s) => {
+      const normalizedSchool = normalizeForComparison(s.name);
+      const matches = normalizedSchool.includes(normalizedTarget) ||
+        normalizedTarget.includes(normalizedSchool) ||
+        normalizedSchool.includes(normalizedFullName) ||
+        normalizedFullName.includes(normalizedSchool);
+      return matches ? total + s.count : total;
+    }, 0);
   };
 
   const filteredSchools = schools.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()));

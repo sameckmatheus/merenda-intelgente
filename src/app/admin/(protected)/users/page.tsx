@@ -14,13 +14,27 @@ import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { User } from "@/lib/types";
 import { SCHOOLS_LIST } from "@/lib/constants";
+import { getFullSchoolName } from "@/lib/utils";
+
+// Helper to get role label in Portuguese
+const getRoleLabel = (role: string) => {
+  const roleMap: Record<string, string> = {
+    admin: 'Administrador',
+    school_responsible: 'Responsável',
+    nutritionist: 'Gestor'
+  };
+  return roleMap[role] || role;
+};
 
 // Helper to fetch schools for dropdown
 const useSchools = () => {
   const [schools, setSchools] = useState<{ id: string, name: string }[]>([]);
   useEffect(() => {
-    // Use the centralized constant list
-    setSchools(SCHOOLS_LIST.map(name => ({ id: name, name })));
+    // Use full school names in dropdown
+    setSchools(SCHOOLS_LIST.map(name => ({
+      id: name,
+      name: getFullSchoolName(name)
+    })));
   }, []);
   return schools;
 };
@@ -33,8 +47,11 @@ const UserCard = ({ user, onClick }: { user: User, onClick: () => void }) => (
       </div>
       <div className="flex-1 overflow-hidden">
         <CardTitle className="text-base font-bold truncate" title={user.name}>{user.name}</CardTitle>
-        <CardDescription className="truncate flex items-center gap-1">
-          <Building2 className="w-3 h-3" /> {user.schoolId || 'Sem Escola'}
+        <CardDescription className="flex items-center gap-1 min-w-0" title={user.schoolId ? getFullSchoolName(user.schoolId) : 'Sem Escola'}>
+          <Building2 className="w-3 h-3 shrink-0" />
+          <span className="truncate text-xs leading-tight">
+            {user.schoolId ? getFullSchoolName(user.schoolId) : 'Sem Escola'}
+          </span>
         </CardDescription>
       </div>
     </CardHeader>
@@ -45,7 +62,7 @@ const UserCard = ({ user, onClick }: { user: User, onClick: () => void }) => (
           <span className="truncate">{user.email}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="capitalize">{user.role === 'school_responsible' ? 'Responsável' : user.role}</Badge>
+          <Badge variant="outline" className="capitalize">{getRoleLabel(user.role)}</Badge>
         </div>
       </div>
     </CardContent>
@@ -151,8 +168,8 @@ const UserDetailsModal = ({ user, isOpen, onClose, onUpdate, schools }: { user: 
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Administrador</SelectItem>
-                  <SelectItem value="school_responsible">Resp. Escola</SelectItem>
-                  <SelectItem value="nutritionist">Nutricionista</SelectItem>
+                  <SelectItem value="school_responsible">Responsável</SelectItem>
+                  <SelectItem value="nutritionist">Gestor</SelectItem>
                 </SelectContent>
               </Select>
             </div>

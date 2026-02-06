@@ -49,6 +49,15 @@ export function Combobox({
     const [open, setOpen] = React.useState(false)
     const [searchTerm, setSearchTerm] = React.useState("")
 
+    // Normalize for case/accent-insensitive search
+    const normalizeForSearch = (str: string): string => {
+        return str
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "") // Remove accents
+            .replace(/[^a-z0-9\s]/g, ""); // Keep alphanumeric and spaces
+    };
+
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -88,7 +97,7 @@ export function Combobox({
                         <CommandEmpty className="py-6 text-center text-sm">{emptyMessage}</CommandEmpty>
                         <CommandGroup>
                             {options.filter(option =>
-                                option.label.toLowerCase().includes(searchTerm.toLowerCase())
+                                normalizeForSearch(option.label).includes(normalizeForSearch(searchTerm))
                             ).map((option) => (
                                 <CommandItem
                                     key={option.value}

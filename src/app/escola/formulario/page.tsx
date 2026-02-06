@@ -23,7 +23,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { cn, normalizeSchoolName } from "@/lib/utils";
+import { cn, normalizeSchoolName, getFullSchoolName } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const formSchema = z.object({
@@ -289,13 +289,13 @@ export default function FormularioPage() {
                                                             <SelectContent>
                                                                 {availableSchools.map((school) => (
                                                                     <SelectItem key={school} value={school}>
-                                                                        {school}
+                                                                        {getFullSchoolName(school)}
                                                                     </SelectItem>
                                                                 ))}
                                                             </SelectContent>
                                                         </Select>
                                                     ) : (
-                                                        <Input {...field} disabled className="bg-slate-50/50 h-12 rounded-xl border-slate-200" />
+                                                        <Input value={schoolName ? getFullSchoolName(schoolName) : ''} disabled className="bg-slate-50/50 h-12 rounded-xl border-slate-200" />
                                                     )}
                                                 </FormControl>
                                                 <FormMessage />

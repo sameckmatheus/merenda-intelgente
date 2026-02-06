@@ -27,7 +27,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { Filter, Submission, menuTypeTranslations, statusTranslations } from "@/lib/types";
 import { db } from "@/lib/firebase";
-import { cn } from "@/lib/utils";
+import { cn, getFullSchoolName } from "@/lib/utils";
 
 const MENU_TYPE_STYLES = {
   planned: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -372,7 +372,7 @@ export default function AdminDashboard() {
                             sub.helpNeeded && "bg-red-50 hover:bg-red-100/80"
                           )}
                         >
-                          <TableCell className="font-medium">{sub.school}</TableCell>
+                          <TableCell className="font-medium">{getFullSchoolName(sub.school)}</TableCell>
                           <TableCell>{format(sub.date instanceof Timestamp ? sub.date.toDate() : new Date(sub.date), "dd/MM/yy")}</TableCell>
                           <TableCell>{sub.shift}</TableCell>
                           <TableCell>{sub.respondentName}</TableCell>
@@ -438,7 +438,7 @@ export default function AdminDashboard() {
                   <div className="p-1.5 md:p-2 bg-blue-100 rounded-lg text-blue-600 shrink-0">
                     <GraduationCap className="w-4 h-4 md:w-6 md:h-6" />
                   </div>
-                  {selectedSubmission.school}
+                  {getFullSchoolName(selectedSubmission.school)}
                 </DialogTitle>
                 <DialogDescription className="text-xs md:text-sm text-slate-500 text-left mt-1">
                   Registro de {selectedSubmission.respondentName} para o turno da {selectedSubmission.shift} em{' '}
@@ -507,30 +507,33 @@ export default function AdminDashboard() {
 
                 <Separator className="bg-slate-200" />
 
-                <div className="p-4 md:p-6 border border-amber-200 bg-amber-50/50 rounded-xl space-y-4">
-                  <h3 className="font-bold text-amber-900 flex items-center gap-2 text-sm md:text-base">
-                    <HelpCircle className="w-5 h-5 text-amber-600" /> Seção de Ajuda
+                <div className="p-4 md:p-6 border-2 border-red-500 bg-gradient-to-br from-red-50 to-orange-50 rounded-xl space-y-4 shadow-sm">
+                  <h3 className="font-bold text-red-900 flex items-center gap-2 text-sm md:text-base">
+                    <div className="p-1.5 bg-red-500 rounded-lg">
+                      <HelpCircle className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                    </div>
+                    Ajuda Necessária
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <DetailItem
-                      icon={<HelpCircle className="w-4 h-4 text-amber-600" />}
+                      icon={<HelpCircle className="w-4 h-4 text-red-600" />}
                       label="Pedido de Ajuda"
                       value={selectedSubmission.helpNeeded}
                     />
                     <DetailItem
-                      icon={<ShoppingBasket className="w-4 h-4 text-amber-600" />}
+                      icon={<ShoppingBasket className="w-4 h-4 text-orange-600" />}
                       label="Pode Comprar?"
                       value={selectedSubmission.canBuyMissingItems}
                     />
                   </div>
                   <DetailItem
-                    icon={<MessageSquare className="w-4 h-4 text-amber-600" />}
+                    icon={<MessageSquare className="w-4 h-4 text-red-600" />}
                     label="Itens em Falta"
                     value={selectedSubmission.missingItems}
                     fullWidth
                   />
                   <DetailItem
-                    icon={<ShoppingBasket className="w-4 h-4 text-amber-600" />}
+                    icon={<ShoppingBasket className="w-4 h-4 text-orange-600" />}
                     label="Itens Comprados"
                     value={selectedSubmission.itemsPurchased}
                     fullWidth
@@ -539,9 +542,12 @@ export default function AdminDashboard() {
 
                 <Separator className="bg-slate-200" />
 
-                <div className="p-4 md:p-6 border border-blue-100 bg-blue-50/30 rounded-xl space-y-4">
-                  <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm md:text-base">
-                    <PackageCheck className="w-5 h-5 text-blue-600" /> Seção de Suprimentos
+                <div className="p-4 md:p-6 border-2 border-blue-500 bg-gradient-to-br from-blue-50 to-emerald-50 rounded-xl space-y-4 shadow-sm">
+                  <h3 className="font-bold text-blue-900 flex items-center gap-2 text-sm md:text-base">
+                    <div className="p-1.5 bg-blue-500 rounded-lg">
+                      <PackageCheck className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                    </div>
+                    Suprimentos Recebidos
                   </h3>
                   <DetailItem
                     icon={<PackageCheck className="w-4 h-4 text-blue-600" />}
@@ -549,7 +555,7 @@ export default function AdminDashboard() {
                     value={selectedSubmission.suppliesReceived}
                   />
                   <DetailItem
-                    icon={<MessageSquare className="w-4 h-4 text-blue-600" />}
+                    icon={<MessageSquare className="w-4 h-4 text-emerald-600" />}
                     label="Suprimentos Recebidos"
                     value={selectedSubmission.suppliesDescription}
                     fullWidth

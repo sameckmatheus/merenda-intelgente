@@ -674,19 +674,34 @@ export default function SchoolDashboardContent({ school, isOpen, onClose, hideHe
                 .catch(err => console.error(err));
 
             // Real-time listener for Submissions
-            const q = query(
-                collection(db, "submissions"),
-                where("school", "==", school)
-                // Removed orderBy to ensure OLD records (without createdAt) are also returned.
-                // Sorting will be done client-side.
-            );
+            // CHANGED: Fetch ALL submissions and filter client-side to catch all school name variations
+            console.log(`🔍 [DILMA DEBUG] Setting up Firestore query - fetching ALL submissions for client-side filtering`);
+            console.log(`🎯 [DILMA DEBUG] Target school: "${school}"`);
 
-            // Note: orderBy might require an index. If index is missing, it will fail in console.
-            // Safe fallback: client side sort if index missing? 
-            // Better to try/catch the snapshot? onSnapshot error handler handles it.
+            // Helper function to normalize school names for comparison
+            const normalizeForComparison = (name: string): string => {
+                return name
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "") // Remove accents
+                    .replace(/[^a-z0-9]/g, ""); // Remove special chars and spaces
+            };
+
+            const normalizedTargetSchool = normalizeForComparison(school);
+            console.log(`🔄 [DILMA DEBUG] Normalized target: "${normalizedTargetSchool}"`);
+
+            // Also check against full school name
+            const fullSchoolName = getFullSchoolName(school);
+            const normalizedFullName = normalizeForComparison(fullSchoolName);
+            console.log(`📚 [DILMA DEBUG] Full name: "${fullSchoolName}" -> normalized: "${normalizedFullName}"`);
+
+            const q = query(collection(db, "submissions"));
 
             const unsubscribe = onSnapshot(q, (snapshot: any) => {
-                const submissions = snapshot.docs.map((doc: any) => {
+                console.log(`📦 [DILMA DEBUG] Firestore snapshot received. Total docs in database: ${snapshot.docs.length}`);
+
+                // Map all submissions
+                const allSubmissions = snapshot.docs.map((doc: any) => {
                     const d = doc.data();
                     return {
                         id: doc.id,
@@ -696,14 +711,41 @@ export default function SchoolDashboardContent({ school, isOpen, onClose, hideHe
                     };
                 });
 
+                // Filter by normalized school name (catches all variations)
+                const submissions = allSubmissions.filter((s: any) => {
+                    if (!s.school) return false;
+                    const normalizedSubmissionSchool = normalizeForComparison(s.school);
+                    // Match against either short name or full name
+                    const matches = normalizedSubmissionSchool.includes(normalizedTargetSchool) ||
+                        normalizedTargetSchool.includes(normalizedSubmissionSchool) ||
+                        normalizedSubmissionSchool.includes(normalizedFullName) ||
+                        normalizedFullName.includes(normalizedSubmissionSchool);
+                    return matches;
+                });
+
+                console.log(`🎯 [DILMA DEBUG] Filtered to ${submissions.length} submissions matching "${school}"`);
+
+                // Log sample of schools to check for variations
+                if (submissions.length > 0) {
+                    const uniqueSchools = [...new Set(submissions.map((s: any) => s.school))];
+                    console.log(`🏫 [DILMA DEBUG] Unique school name variations found:`, uniqueSchools);
+                    console.log(`📅 [DILMA DEBUG] Date range of records:`, {
+                        oldest: submissions.map((s: any) => s.date).filter(Boolean).sort()[0],
+                        newest: submissions.map((s: any) => s.date).filter(Boolean).sort().reverse()[0]
+                    });
+                }
+
                 // Client-side sort to handle missing createdAt safely
                 submissions.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
 
+                console.log(`✅ [DILMA DEBUG] Setting ${submissions.length} submissions to state`);
                 setData(submissions);
                 setVisibleData(submissions.slice(0, PAGE_SIZE));
                 setIsLoading(false);
             }, (error: any) => {
-                console.error("Snapshot error:", error);
+
+                console.error("❌ [DILMA DEBUG] Snapshot error:", error);
+                console.log("⚠️ [DILMA DEBUG] Falling back to API");
 
                 // Fallback to API if snapshot fails (e.g. permission or index issue)
                 console.warn("Falling back to API fetch due to snapshot error");
@@ -711,6 +753,7 @@ export default function SchoolDashboardContent({ school, isOpen, onClose, hideHe
                     .then(res => res.json())
                     .then(json => {
                         const allSubmissions = json.submissions || [];
+                        console.log(`📦 [DILMA DEBUG] API returned ${allSubmissions.length} submissions`);
                         setData(allSubmissions);
                         setVisibleData(allSubmissions.slice(0, PAGE_SIZE));
                     })
