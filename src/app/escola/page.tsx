@@ -8,8 +8,8 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase'; // Import auth from here
 import { normalizeSchoolName } from '@/lib/utils';
 import SchoolDashboardContent from '@/components/school-dashboard-content';
-import { GraduationCap, Loader2, RefreshCcw } from 'lucide-react';
-import { Button } from "@/components/ui/button";
+import { GraduationCap, Loader2 } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getFullSchoolName } from "@/lib/utils";
 
 export default function SchoolDashboardPage() {
@@ -70,29 +70,33 @@ export default function SchoolDashboardPage() {
                     return;
                 }
 
-                if (userData.role !== "school") {
-                    // Allow access anyway with email-based school
-                    console.warn('⚠️ Unknown role:', userData.role, '- using email-based default');
-                    setUserEmail(user.email);
-                    const derivedSchool = normalizeSchoolName(user.email?.split('@')[0]) || user.email?.split('@')[0].toUpperCase();
-                    setSchools([derivedSchool]);
-                    setLoading(false);
-                    return;
-                }
-
                 const userSchools = userData.schools || [];
                 console.log('🏫 User schools:', userSchools);
 
-                if (userSchools.length === 0) {
-                    console.warn('⚠️ No schools linked - using email-based default');
+                if (userSchools.length > 0) {
+                    // Check role just for warning/logging, but allow access if schools exist
+                    if (userData.role !== "school" && userData.role !== "school_responsible") {
+                        console.warn('⚠️ Unknown role:', userData.role, '- but schools present, allowing access');
+                    }
+
+                    console.log('✅ Setting user email and schools from API');
                     setUserEmail(user.email);
-                    setUserEmail(user.email);
-                    const defaultSchool = normalizeSchoolName(user.email?.split('@')[0]) || user.email?.split('@')[0].toUpperCase();
-                    setSchools([defaultSchool]);
-                    setActiveTab(defaultSchool);
+                    setSchools(userSchools);
+                    setActiveTab(userSchools[0]);
                     setLoading(false);
                     return;
                 }
+
+                // If we reach here, no schools were returned from API
+                console.warn('⚠️ No schools linked in API - using email-based default');
+
+                // Fallback logic
+                setUserEmail(user.email);
+                const defaultSchool = normalizeSchoolName(user.email?.split('@')[0]) || user.email?.split('@')[0].toUpperCase();
+                setSchools([defaultSchool]);
+                setActiveTab(defaultSchool);
+                setLoading(false);
+
 
                 console.log('✅ Setting user email and schools');
                 setUserEmail(user.email);
@@ -141,33 +145,33 @@ export default function SchoolDashboardPage() {
             <div className="p-4 md:p-6 space-y-6">
 
                 {/* School Selector Tabs */}
-                {/* Header with Switcher */}
                 {activeTab && (
-                    <div className="flex flex-col space-y-6">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm">
-                            <div className="flex items-center gap-3">
-                                <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-                                    <GraduationCap className="h-6 w-6" />
-                                </div>
-                                <div>
-                                    <p className="text-xs font-bold text-blue-600 tracking-wider uppercase">Unidade Escolar</p>
-                                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{getFullSchoolName(activeTab)}</h1>
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col space-y-6">
+                        <div className="flex flex-col gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div className="flex items-center gap-3 w-full sm:w-auto">
+                                    <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shrink-0">
+                                        <GraduationCap className="h-6 w-6" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-blue-600 tracking-wider uppercase">Unidade Escolar</p>
+                                        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 line-clamp-1">{getFullSchoolName(activeTab)}</h1>
+                                    </div>
                                 </div>
                             </div>
 
                             {schools.length > 1 && (
-                                <Button
-                                    onClick={() => {
-                                        const currentIndex = schools.indexOf(activeTab);
-                                        const nextIndex = (currentIndex + 1) % schools.length;
-                                        setActiveTab(schools[nextIndex]);
-                                    }}
-                                    variant="outline"
-                                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 hover:text-white text-white gap-2 h-10"
-                                >
-                                    <RefreshCcw className="h-4 w-4" />
-                                    Trocar de Escola
-                                </Button>
+                                <TabsList className="w-full justify-start h-auto p-1 bg-slate-100 rounded-lg overflow-x-auto flex-wrap sm:flex-nowrap">
+                                    {schools.map((school) => (
+                                        <TabsTrigger
+                                            key={school}
+                                            value={school}
+                                            className="flex-1 min-w-[150px] rounded-md data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm data-[state=active]:font-semibold py-2 transition-all"
+                                        >
+                                            {getFullSchoolName(school)}
+                                        </TabsTrigger>
+                                    ))}
+                                </TabsList>
                             )}
                         </div>
 
@@ -175,7 +179,7 @@ export default function SchoolDashboardPage() {
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <SchoolDashboardContent school={activeTab} hideHeader={true} />
                         </div>
-                    </div>
+                    </Tabs>
                 )}
             </div>
         </div>
