@@ -23,6 +23,9 @@ export const users = pgTable("users", {
 export const schools = pgTable("schools", {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
+    address: text("address"), // added
+    phone: text("phone"), // added
+    status: text("status").default("active"), // added
     totalStudents: jsonb("total_students").$type<{
         morning: number;
         afternoon: number;
@@ -34,7 +37,7 @@ export const schools = pgTable("schools", {
     }>().notNull(),
     responsibleIds: text("responsible_ids").array(),
     inventory: jsonb("inventory"), // added inventory
-    categories: jsonb("categories"), // added categories override per school if needed, or if stored here
+    categories: jsonb("categories"), // added categories
     updatedAt: timestamp("updated_at").defaultNow(),
 });
 
