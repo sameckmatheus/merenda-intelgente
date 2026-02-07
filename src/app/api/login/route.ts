@@ -52,17 +52,19 @@ export async function POST(request: Request) {
 
     // Fetch user role
     let role = 'school';
-    if (uid && isFirebaseAdminInitialized()) {
+    if (uid) {
       try {
-        const db = getFirestore();
-        const userDoc = await db.collection('users').doc(uid).get();
-        if (userDoc.exists) {
-          const userData = userDoc.data();
-          role = userData?.role || 'school';
+        const { db } = await import('@/db');
+        const { users } = await import('@/db/schema');
+        const { eq } = await import('drizzle-orm');
+
+        const userResults = await db.select().from(users).where(eq(users.uid, uid)).limit(1);
+        if (userResults.length > 0) {
+          role = userResults[0].role || 'school';
         }
       } catch (dbError) {
-        console.error("Error fetching user role:", dbError);
-        // Fallback to school if DB fails, to allow login at least (restricted by client later)
+        console.error("Error fetching user role from Postgres:", dbError);
+        // Fallback or just proceed as school
       }
     }
 
