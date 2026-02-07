@@ -11,6 +11,8 @@ export function middleware(request: NextRequest) {
     const sessionCookie = request.cookies.get('menu-planner-auth'); // using hardcoded name to be safe
     const { pathname } = request.nextUrl;
 
+    console.log(`Middleware: ${pathname} - Cookie found: ${!!sessionCookie}`);
+
     // Protect Admin Routes
     if (pathname.startsWith('/admin')) {
         // Exclude login page itself if it's under admin (e.g. /admin/login)

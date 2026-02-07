@@ -6,8 +6,10 @@ import dotenv from "dotenv";
 
 dotenv.config({ path: ".env.local" });
 
+const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+
 const pool = new Pool({
-    connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL,
+    connectionString: connectionString ? connectionString.split('?')[0] : undefined,
     ssl: {
         rejectUnauthorized: false
     }
