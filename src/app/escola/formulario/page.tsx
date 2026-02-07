@@ -84,89 +84,24 @@ export default function FormularioPage() {
     const absentStudents = totalStudents - presentStudents;
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                router.push("/login");
-                return;
+        // Auth is guaranteed by SchoolAuthGuard
+        const user = auth.currentUser;
+
+        if (user) {
+            // Simplified loading logic - just set data
+            if (user.email) {
+                const derivedSchool = normalizeSchoolName(user.email.split('@')[0]) || user.email.split('@')[0].toUpperCase();
+                setSchoolName(derivedSchool);
+                setAvailableSchools([derivedSchool]);
+                form.setValue("school", derivedSchool);
+                form.setValue("respondentName", user.displayName || user.email.split('@')[0]);
             }
-
-            try {
-                // Get ID token for API authentication
-                const idToken = await user.getIdToken();
-
-                // Fetch user profile from API (bypassing client-side permission issues)
-                const res = await fetch('/api/user/me', {
-                    headers: {
-                        'Authorization': `Bearer ${idToken}`
-                    }
-                });
-
-                if (!res.ok) throw new Error('Failed to fetch user data');
-
-                const userData = await res.json();
-
-                if (userData.role !== "school") {
-                    router.push("/login"); // Or access denied page
-                    return;
-                }
-
-                const schools = userData.schools || [];
-                if (schools.length === 0) {
-                    toast({
-                        variant: "destructive",
-                        title: "Erro",
-                        description: "Nenhuma escola associada ao usuário.",
-                    });
-                    // router.push("/login"); // Optional: let them see the empty state or redirect
-                    return;
-                }
-
-                const school = schools[0];
-                setSchoolName(school);
-                setAvailableSchools(schools);
-
-                // Set form default values
-                form.setValue("school", school);
-                form.setValue("respondentName", userData.name || user.displayName || user.email?.split('@')[0] || "");
-
-            } catch (error) {
-                console.error("Error fetching user data:", error);
-
-                // Fallback Logic
-                if (user.email) {
-                    console.log("⚠️ API Failed, using fallback from email");
-                    const email = user.email;
-                    let schoolsList: string[] = [];
-
-                    if (email === 'marcosfreiremunicipal@gmail.com') {
-                        schoolsList = ['MARCOS FREIRE', 'ANEXO MARCOS FREIRE'];
-                    } else {
-                        const derivedSchool = normalizeSchoolName(email.split('@')[0]) || email.split('@')[0].toUpperCase();
-                        schoolsList = [derivedSchool];
-                    }
-
-                    if (schoolsList.length > 0) {
-                        const school = schoolsList[0];
-                        setSchoolName(school);
-                        setAvailableSchools(schoolsList);
-                        form.setValue("school", school);
-                        form.setValue("respondentName", user.displayName || email.split('@')[0]);
-                        return;
-                    }
-                }
-
-                toast({
-                    variant: "destructive",
-                    title: "Erro",
-                    description: "Não foi possível carregar os dados do usuário. Recarregue a página.",
-                });
-            } finally {
-                setIsLoading(false);
-            }
-        });
-
-        return () => unsubscribe();
-    }, [router, form, toast]);
+            setIsLoading(false);
+        } else {
+            // Should not happen due to guard, but safe fallback
+            setIsLoading(false);
+        }
+    }, [form]);
 
     const onSubmit = async (values: FormValues) => {
         setIsSubmitting(true);

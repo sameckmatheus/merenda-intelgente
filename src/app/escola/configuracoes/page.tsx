@@ -79,67 +79,24 @@ export default function SchoolSettingsPage() {
 
     useEffect(() => {
         const auth = getAuth();
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (!user || !user.email) {
-                router.push("/login");
-                return;
-            }
+        // Auth is guaranteed by SchoolAuthGuard in layout
+        const user = auth.currentUser;
 
-            setUserEmail(user.email);
+        if (user) {
+            setUserEmail(user.email || "");
             setSchoolProfile(prev => ({ ...prev, email: user.email || "" }));
 
-            try {
-                // Fetch user data from API to get accurate schools list (handling exceptions/patches)
-                const idToken = await user.getIdToken();
-                const res = await fetch('/api/user/me', {
-                    headers: {
-                        'Authorization': `Bearer ${idToken}`
-                    }
-                });
-
-                if (!res.ok) throw new Error('Failed to fetch user data');
-                const userData = await res.json();
-
-                if (userData.role !== "school") {
-                    router.push("/login");
-                    return;
-                }
-
-                const schools = userData.schools || [];
-                if (schools.length === 0) {
-                    router.push("/login");
-                    return;
-                }
-
-                setAvailableSchools(schools);
-
-                // Select first school by default if none selected
+            // Initial fetch or setup
+            if (user.email) {
+                const derived = normalizeSchoolName(user.email.split('@')[0]) || user.email.split('@')[0].toUpperCase();
+                setAvailableSchools([derived]);
                 if (!schoolName) {
-                    const initialSchool = schools[0];
-                    setSchoolName(initialSchool);
-                    fetchSettings(initialSchool);
-                }
-
-            } catch (error) {
-                console.error("Error fetching user data:", error);
-
-                // Fallback Logic
-                if (user.email) {
-                    const derived = normalizeSchoolName(user.email.split('@')[0]) || user.email.split('@')[0].toUpperCase();
-                    setAvailableSchools([derived]);
-
-                    if (!schoolName) {
-                        setSchoolName(derived);
-                        fetchSettings(derived);
-                    }
-                } else {
-                    router.push("/login");
+                    setSchoolName(derived);
+                    fetchSettings(derived);
                 }
             }
-        });
-
-        return () => unsubscribe();
-    }, [router, schoolName]);
+        }
+    }, [schoolName]);
 
     const handleSchoolChange = (newSchool: string) => {
         setSchoolName(newSchool);
