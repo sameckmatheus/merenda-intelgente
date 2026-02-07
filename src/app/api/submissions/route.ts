@@ -7,6 +7,7 @@ import { db } from '@/db';
 import { submissions } from '@/db/schema';
 import { and, desc, eq, gte, lte, ilike } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { logActivity } from '@/lib/db-utils';
 
 initAdmin();
 
@@ -121,15 +122,26 @@ export async function POST(request: Request) {
       description: body.description,
       status: 'pendente',
       alternativeMenuDescription: body.alternativeMenuDescription,
-      itemsPurchased: !!body.itemsPurchased, // Check if frontend sends boolean or string
+      itemsPurchased: !!body.itemsPurchased,
       missingItems: body.missingItems,
       canBuyMissingItems: body.canBuyMissingItems === true || body.canBuyMissingItems === 'sim' || body.canBuyMissingItems === 'true',
       suppliesReceived: !!body.suppliesReceived,
       suppliesDescription: body.suppliesDescription,
       observations: body.observations,
       menuAdaptationReason: body.menuAdaptationReason,
+      createdBy: authed.uid, // Add User ID
       createdAt: now
     });
+
+    // Log Activity
+    await logActivity(
+      authed.uid,
+      (authed as any).email,
+      "Create Submission",
+      "submissions",
+      id,
+      { school: body.school, date: submissionDate }
+    );
 
     return NextResponse.json({ success: true, id }, { status: 200 });
   } catch (e) {

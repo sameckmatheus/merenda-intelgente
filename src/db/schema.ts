@@ -76,6 +76,7 @@ export const submissions = pgTable("submissions", {
     observations: text("observations"),
     helpRequestId: text("help_request_id"),
     menuAdaptationReason: text("menu_adaptation_reason"),
+    createdBy: text("created_by"), // FK to users.id
     createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -84,4 +85,15 @@ export const systemSettings = pgTable("system_settings", {
     data: jsonb("data").notNull(), // Stores arbitrary settings
     updatedAt: timestamp("updated_at").defaultNow(),
     updatedBy: text("updated_by"),
+});
+
+export const auditLogs = pgTable("audit_logs", {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(), // Should potentially be FK to users.id but keeping loose for flexibility if user deleted
+    userEmail: text("user_email"), // Snapshot in case user is deleted
+    action: text("action").notNull(), // 'create', 'update', 'delete', 'login'
+    resource: text("resource").notNull(), // 'submission', 'school', 'settings'
+    resourceId: text("resource_id"),
+    details: jsonb("details"), // { before: ..., after: ... }
+    createdAt: timestamp("created_at").defaultNow(),
 });

@@ -6,6 +6,7 @@ import { AUTH_COOKIE_NAME } from '@/lib/constants';
 import { db } from '@/db';
 import { schools } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { logActivity } from '@/lib/db-utils';
 
 initAdmin();
 
@@ -117,6 +118,16 @@ export async function POST(request: Request) {
                 updatedAt: new Date()
             });
         }
+
+        // Log Activity
+        await logActivity(
+            (authed as any).uid || 'unknown',
+            (authed as any).email,
+            "Update School Settings",
+            "schools",
+            docId,
+            { changes: body }
+        );
 
         return NextResponse.json({ success: true }, { status: 200 });
     } catch (e) {

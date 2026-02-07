@@ -62,33 +62,62 @@ export async function GET(request: Request) {
         // Drizzle Fetch
         console.log('🔍 Fetching user data from Postgres for UID:', uid);
         const userResults = await db.select().from(users).where(eq(users.uid, uid)).limit(1);
-        const userData = userResults[0];
+        let userData = userResults[0];
 
         if (!userData) {
-            console.warn('⚠️ User exists in Auth but not in Postgres DB. Returning basic info.');
+            console.log('⚠️ User exists in Auth but not in Postgres DB. Auto-provisioning...');
             const email = decodedTokenData?.email || 'unknown@example.com';
 
-            let basicData: any = {
-                uid,
-                email,
-                role: 'school',
-                schools: []
-            };
+            // Determine School ID
+            let schoolId: string | null = null;
+            let role: "school_responsible" | "admin" | "nutritionist" = "school_responsible";
 
-            if (email === 'marcosfreiremunicipal@gmail.com') {
-                console.log('🔧 Injecting multi-school access (no-db) for marcosfreiremunicipal@gmail.com');
-                basicData.schools = ['MARCOS FREIRE', 'ANEXO MARCOS FREIRE'];
+            if (email === 'marcosfreiremunicipal@gmail.com') { // Hardcoded admin/special for now
+                schoolId = 'marcos freire'; // OR 'anexo marcos freire'? The old logic injected multiple.
+                // Actually, if they need multiple access, the DB schema `schoolId` is limiting.
+                // But for "distinct user", let's assign them to the main school.
+                // Or we can make them ADMIN?
             } else {
+                // Try to match school by email prefix
                 const derivedSchool = normalizeSchoolName(email?.split('@')[0]);
                 if (derivedSchool) {
-                    basicData.schools = [derivedSchool];
+                    // Check if school exists?
+                    // const schoolExists = await db.select().from(schools).where(eq(schools.id, derivedSchool));
+                    schoolId = derivedSchool;
                 } else {
-                    basicData.schools = [email?.split('@')[0].toUpperCase()];
+                    // Fallback to email prefix as ID?
+                    schoolId = email?.split('@')[0].toLowerCase(); // normalized ID
                 }
             }
 
-            return NextResponse.json(basicData);
+            // Create User
+            try {
+                const newUser = {
+                    id: uid, // Use Auth UID as PK
+                    uid: uid,
+                    name: decodedTokenData?.name || email.split('@')[0],
+                    email: email,
+                    role: role,
+                    schoolId: schoolId,
+                    status: 'active' as const,
+                    createdAt: new Date(),
+                };
+
+                await db.insert(users).values(newUser);
+                console.log(`✅ User ${email} auto-provisioned in Postgres.`);
+
+                // Return as normal user
+                // We need to re-fetch or just use the object
+                userData = newUser as any;
+            } catch (e) {
+                console.error("Failed to auto-provision user:", e);
+                return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 });
+            }
         }
+
+        // Proceed with userData (either fetched or created)
+        // ... (existing logic to format response)
+
 
         console.log('✅ User data fetched successfully. Role:', userData?.role);
 

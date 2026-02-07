@@ -1,3 +1,4 @@
+
 import {
     LayoutDashboard,
     School,
@@ -5,6 +6,7 @@ import {
     FileBarChart,
     Settings,
     Users,
+    ShieldCheck,
 } from "lucide-react";
 
 export const menuItems = [
@@ -37,5 +39,10 @@ export const menuItems = [
         title: "Configurações",
         href: "/admin/settings",
         icon: Settings,
+    },
+    {
+        title: "Audit Logs",
+        href: "/admin/logs",
+        icon: ShieldCheck,
     },
 ];
