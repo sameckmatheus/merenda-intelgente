@@ -1,6 +1,16 @@
 
-import { sql } from "@vercel/postgres";
-import { drizzle } from "drizzle-orm/vercel-postgres";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import * as schema from "./schema";
+import dotenv from "dotenv";
 
-export const db = drizzle(sql, { schema });
+dotenv.config({ path: ".env.local" });
+
+const pool = new Pool({
+    connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false
+    }
+});
+
+export const db = drizzle(pool, { schema });
