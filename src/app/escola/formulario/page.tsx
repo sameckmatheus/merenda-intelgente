@@ -84,23 +84,59 @@ export default function FormularioPage() {
     const absentStudents = totalStudents - presentStudents;
 
     useEffect(() => {
-        // Auth is guaranteed by SchoolAuthGuard
         const user = auth.currentUser;
 
-        if (user) {
-            // Simplified loading logic - just set data
-            if (user.email) {
-                const derivedSchool = normalizeSchoolName(user.email.split('@')[0]) || user.email.split('@')[0].toUpperCase();
-                setSchoolName(derivedSchool);
-                setAvailableSchools([derivedSchool]);
-                form.setValue("school", derivedSchool);
-                form.setValue("respondentName", user.displayName || user.email.split('@')[0]);
+        if (!user) return;
+
+        const fetchUserData = async () => {
+            try {
+                const idToken = await user.getIdToken();
+                const res = await fetch('/api/user/me', {
+                    headers: { 'Authorization': `Bearer ${idToken}` }
+                });
+
+                if (res.ok) {
+                    const userData = await res.json();
+                    const schools = userData.schools || [];
+
+                    if (schools.length > 0) {
+                        setAvailableSchools(schools);
+                        // Default to first school if not set
+                        if (!schoolName) {
+                            setSchoolName(schools[0]);
+                            form.setValue("school", schools[0]);
+                        }
+                    } else {
+                        // Fallback if empty array
+                        const derived = normalizeSchoolName(user.email?.split('@')[0] || "");
+                        setAvailableSchools(derived ? [derived] : []);
+                        if (derived) {
+                            setSchoolName(derived);
+                            form.setValue("school", derived);
+                        }
+                    }
+
+                    // Always set respondent name from user data or auth
+                    form.setValue("respondentName", userData.name || user.displayName || user.email?.split('@')[0] || "");
+                } else {
+                    throw new Error("Failed to fetch");
+                }
+            } catch (error) {
+                console.error("Error fetching user data:", error);
+                // Fallback
+                if (user.email) {
+                    const derived = normalizeSchoolName(user.email.split('@')[0]) || user.email.split('@')[0].toUpperCase();
+                    setAvailableSchools([derived]);
+                    setSchoolName(derived);
+                    form.setValue("school", derived);
+                    form.setValue("respondentName", user.displayName || user.email.split('@')[0]);
+                }
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
-        } else {
-            // Should not happen due to guard, but safe fallback
-            setIsLoading(false);
-        }
+        };
+
+        fetchUserData();
     }, [form]);
 
     const onSubmit = async (values: FormValues) => {

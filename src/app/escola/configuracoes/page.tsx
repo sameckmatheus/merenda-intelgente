@@ -78,24 +78,54 @@ export default function SchoolSettingsPage() {
     };
 
     useEffect(() => {
-        const auth = getAuth();
-        // Auth is guaranteed by SchoolAuthGuard in layout
-        const user = auth.currentUser;
+        const user = getAuth().currentUser;
+        if (!user) return;
 
-        if (user) {
-            setUserEmail(user.email || "");
-            setSchoolProfile(prev => ({ ...prev, email: user.email || "" }));
+        setUserEmail(user.email || "");
+        setSchoolProfile(prev => ({ ...prev, email: user.email || "" }));
 
-            // Initial fetch or setup
-            if (user.email) {
-                const derived = normalizeSchoolName(user.email.split('@')[0]) || user.email.split('@')[0].toUpperCase();
-                setAvailableSchools([derived]);
-                if (!schoolName) {
-                    setSchoolName(derived);
-                    fetchSettings(derived);
+        const fetchUserData = async () => {
+            try {
+                const idToken = await user.getIdToken();
+                const res = await fetch('/api/user/me', {
+                    headers: { 'Authorization': `Bearer ${idToken}` }
+                });
+
+                if (res.ok) {
+                    const userData = await res.json();
+                    const schools = userData.schools || [];
+
+                    if (schools.length > 0) {
+                        setAvailableSchools(schools);
+                        if (!schoolName) {
+                            setSchoolName(schools[0]);
+                            fetchSettings(schools[0]);
+                        }
+                    } else {
+                        const derived = normalizeSchoolName(user.email?.split('@')[0] || "");
+                        if (derived) {
+                            setAvailableSchools([derived]);
+                            if (!schoolName) {
+                                setSchoolName(derived);
+                                fetchSettings(derived);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching user data:", error);
+                if (user.email) {
+                    const derived = normalizeSchoolName(user.email.split('@')[0]) || user.email.split('@')[0].toUpperCase();
+                    setAvailableSchools([derived]);
+                    if (!schoolName) {
+                        setSchoolName(derived);
+                        fetchSettings(derived);
+                    }
                 }
             }
-        }
+        };
+
+        fetchUserData();
     }, [schoolName]);
 
     const handleSchoolChange = (newSchool: string) => {
