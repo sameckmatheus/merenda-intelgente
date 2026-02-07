@@ -18,7 +18,7 @@ function LoginPageSkeleton() {
 export default function LoginPage() {
     return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-blue-50 p-6">
-            <div className="mb-10 flex flex-col items-center gap-6 text-center animate-in fade-in slide-in-from-top-6 duration-700">
+            <div className="mb-10 flex flex-col items-center gap-6 text-center">
                 <div className="bg-white/40 p-4 rounded-3xl backdrop-blur-xl shadow-xl shadow-indigo-900/5 border border-white/50">
                     <Logo className="h-28 w-28" />
                 </div>
@@ -29,7 +29,7 @@ export default function LoginPage() {
                     <p className="text-indigo-600/80 font-medium">Smart Plate</p>
                 </div>
             </div>
-            <Card className="w-full max-w-sm rounded-3xl border-0 bg-white/60 shadow-2xl shadow-indigo-900/10 backdrop-blur-md ring-1 ring-white/60 animate-in zoom-in-95 duration-500">
+            <Card className="w-full max-w-sm rounded-3xl border-0 bg-white/60 shadow-2xl shadow-indigo-900/10 backdrop-blur-md ring-1 ring-white/60 transition-all">
                 <CardHeader className="space-y-1 pb-2 text-center">
                     <CardTitle className="flex items-center justify-center gap-2 text-xl text-slate-800">
                         <School className="w-5 h-5 text-indigo-600" /> Identifique-se
